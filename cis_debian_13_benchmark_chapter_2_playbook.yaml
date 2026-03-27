@@ -1144,6 +1144,7 @@
       changed_when: false
       failed_when: "'** PASS **' not in audit_2_3_2_0.stdout"
       ignore_errors: true
+      when: cis_time_synchronization_daemon | default('systemd-timesyncd') == 'systemd-timesyncd'
       tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     - name: "2.3.2 Configure systemd-timesyncd (Remediation)"
@@ -1165,7 +1166,9 @@
       register: rem_2_3_2_0
       changed_when: rem_2_3_2_0.rc == 0
       ignore_errors: true
-      when: audit_2_3_2_0.rc != 0
+      when:
+        - audit_2_3_2_0.rc != 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'systemd-timesyncd'
       tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -1206,7 +1209,7 @@
       changed_when: false
       failed_when: "'** PASS **' not in audit_2_3_3_0.stdout"
       ignore_errors: true
-      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      when: cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     - name: "2.3.3 Configure chrony (Remediation)"
@@ -1224,7 +1227,9 @@
       register: rem_2_3_3_0
       changed_when: rem_2_3_3_0.rc == 0
       ignore_errors: true
-      when: audit_2_3_3_0.rc != 0
+      when:
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
+        - audit_2_3_3_0.rc != 0
       tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -1237,6 +1242,7 @@
       changed_when: false
       failed_when: audit_2_3_3_1_0.stdout | length == 0
       ignore_errors: true
+      when: cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.3.3.1 Ensure chrony is configured with authorized timeserver (Remediation)"
@@ -1246,7 +1252,9 @@
         create: yes
       register: rem_2_3_3_1_0
       ignore_errors: true
-      when: audit_2_3_3_1_0.stdout | length == 0
+      when:
+        - audit_2_3_3_1_0.stdout | length == 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1259,7 +1267,7 @@
       changed_when: false
       failed_when: audit_2_3_3_2_0.stdout | length > 0
       ignore_errors: true
-      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      when: cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.3.3.2 Ensure chrony is running as user _chrony (Remediation)"
@@ -1271,7 +1279,9 @@
       register: rem_2_3_3_2_0
       changed_when: rem_2_3_3_2_0.rc == 0
       ignore_errors: true
-      when: audit_2_3_3_2_0.rc != 0
+      when:
+        - audit_2_3_3_2_0.rc != 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1285,7 +1295,7 @@
       changed_when: false
       failed_when: "'enabled' not in audit_2_3_3_3_0.stdout or 'active' not in audit_2_3_3_3_0.stdout"
       ignore_errors: true
-      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      when: cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.3.3.3 Ensure chrony is enabled and running (Remediation - chrony is in use on the system, run the following commands)"
@@ -1297,6 +1307,7 @@
       ignore_errors: true
       when:
         - audit_2_3_3_3_0.rc != 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1336,7 +1347,6 @@
       changed_when: false
       failed_when: "'enabled' not in audit_2_4_1_1_0.stdout or 'active' not in audit_2_4_1_1_0.stdout"
       ignore_errors: true
-      when: cis_condition_cron_is_installed_on_the_system_ensure_cron_daemon | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.1.1 Ensure cron daemon is enabled and active (Remediation - cron is installed on the system)"
@@ -1360,7 +1370,6 @@
       changed_when: false
       failed_when: "'Access: (600/-rw-------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_2_0.stdout"
       ignore_errors: true
-      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.1.2 Ensure access to /etc/crontab is configured (Remediation - cron is installed on the system)"
@@ -1384,7 +1393,6 @@
       changed_when: false
       failed_when: "'Access: (700/drwx------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_4_0.stdout"
       ignore_errors: true
-      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.1.4 Ensure access to /etc/cron.daily is configured (Remediation - cron is installed on the system)"
@@ -1408,7 +1416,6 @@
       changed_when: false
       failed_when: "'Access: (700/drwx------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_8_0.stdout"
       ignore_errors: true
-      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.1.8 Ensure access to /etc/cron.d is configured (Remediation - cron is installed on the system)"
@@ -1434,7 +1441,6 @@
       failed_when: >-
         audit_2_4_1_9_0.stdout_lines | reject('match', '^Access: \(640/-rw-r-----\) Owner: \(root\) Group: \((root|crontab)\)$') | list | length > 0
       ignore_errors: true
-      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to_c | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.1.9 Ensure access to crontab is configured (Remediation - cron is installed on the system)"
@@ -1501,7 +1507,6 @@
       failed_when: >-
         audit_2_4_2_1_0.stdout_lines | reject('match', '^Access: \(640/-rw-r-----\) Owner: \(root\) Group: \((daemon|root)\)$') | list | length > 0
       ignore_errors: true
-      when: cis_condition_at_is_installed_on_the_system_ensure_access_to_at_ | default(false)
       tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     - name: "2.4.2.1 Ensure access to at is configured (Remediation - /etc/at.deny exists)"
