@@ -1,0 +1,1078 @@
+---
+- name: "CIS Debian Linux 13 Benchmark Chapter 6 Playbook"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - cis_vars.yaml
+
+  vars:
+    host_dest_dir_temp_base: "/tmp/cis_temp_dir"
+    host_dest_file_ssh_config: "/etc/ssh/sshd_config"
+
+  pre_tasks:
+    - name: "Get current timestamp with millisecond precision"
+      ansible.builtin.command: date +%s%3N
+      register: timestamp_ms
+      changed_when: false
+
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Set temporary directory variable with timestamp"
+      ansible.builtin.set_fact:
+        host_dest_dir_temp_cis: "{{ host_dest_dir_temp_base }}_{{ timestamp_ms.stdout }}"
+
+    - name: "Create the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: directory
+        mode: "0700"
+        owner: root
+        group: root
+      register: temp_dir_creation
+      changed_when: temp_dir_creation.changed
+
+  tasks:
+    # ------------------------------------------------------------
+    # 6.1 System Logging
+    # ------------------------------------------------------------
+    - name: "6.1 System Logging (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.1 System Logging (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1 Configure journald
+    # ------------------------------------------------------------
+    - name: "6.1.1 Configure journald (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.1.1 Configure journald (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1 Configure systemd-journald service
+    # ------------------------------------------------------------
+    - name: "6.1.1.1 Configure systemd-journald service (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.1.1.1 Configure systemd-journald service (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1.1 Ensure journald service is active
+    # ------------------------------------------------------------
+    - name: "6.1.1.1.1 Ensure journald service is active (Audit)"
+      ansible.builtin.shell: |
+        systemctl is-active systemd-journald.service
+      register: audit_6_1_1_1_1_0
+      changed_when: false
+      failed_when: "audit_6_1_1_1_1_0.stdout.strip() != 'active'"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.1.1.1 Ensure journald service is active (Remediation)"
+      ansible.builtin.shell: |
+        systemctl unmask systemd-journald.service
+        systemctl --now enable systemd-journald.service
+      register: rem_6_1_1_1_1_0
+      changed_when: rem_6_1_1_1_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_1_1_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1.2 Ensure journald log file access is configured
+    # ------------------------------------------------------------
+    - name: "6.1.1.1.2 Ensure journald log file access is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          config_files=(/etc/tmpfiles.d/systemd.conf /usr/lib/tmpfiles.d/systemd.conf)
+          warn=()
+          for file in "${config_files[@]}"; do
+            [ -f "$file" ] || continue
+            while read -r type path perm _; do
+              if [[ $type == "f" && $perm =~ ^0?[0-7]{3,4}$ ]]; then
+                perm="${perm#0}"
+                if [ -f "$path" ]; then
+                  actual=$(stat -c "%a" "$path" 2>/dev/null)
+                  if [[ -n $actual && $actual -gt 640 ]]; then
+                    warn+=("File: $path | Perm: $actual (expected max: 640) | Defined
+        in: $file")
+                  fi
+                fi
+              fi
+            done <"$file"
+          done
+          if [ "${#warn[@]}" -eq 0 ]; then
+            echo "No files with permissions more permissive than 0640."
+          else
+            echo -e " *** REVIEW ***"
+            printf "%s\n" "${warn[@]}"
+          fi
+        }
+      register: audit_6_1_1_1_2_0
+      changed_when: false
+      failed_when: "'No files with permissions more permissive than 0640.' not in audit_6_1_1_1_2_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "6.1.1.1.2 Ensure journald log file access is configured (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1.3 Ensure journald log file rotation is configured
+    # ------------------------------------------------------------
+    - name: "6.1.1.1.3 Ensure journald log file rotation is configured (Audit)"
+      ansible.builtin.shell: |
+        systemd-analyze cat-config systemd/journald.conf | tac | grep -Psi -'\b(SystemMaxUse|SystemKeepFree|RuntimeMaxUse|RuntimeKeepFree|MaxFileSec)='
+      register: audit_6_1_1_1_3_0
+      changed_when: false
+      failed_when: "audit_6_1_1_1_3_0.stdout | length == 0"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "6.1.1.1.3 Ensure journald log file rotation is configured (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1.5 Ensure journald Storage is configured
+    # ------------------------------------------------------------
+    - name: "6.1.1.1.5 Ensure journald Storage is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          l_analyze_cmd="$(readlink -e /bin/systemd-analyze ||
+            readlink -e /usr/bin/systemd-analyze)"
+          l_conf_file="systemd/journald.conf" l_block="Journal"
+          l_option="Storage" l_option_value="persistent" a_output=()
+          while IFS= read -r l_file; do
+            l_file="${l_file//# /}"
+            l_opt="$(awk '/\['"$l_block"'\]/{a=1;next}/\[/{a=0}a' "$l_file" \
+              2>/dev/null | grep -Poi '^\h*'"$l_option"'\h*=\h*\H+\b' | tail -n 1)"
+            l_option_value="$(cut -d= -f2 <<<"$l_opt" | xargs)"
+            [ -n "$l_option_value" ] &&
+              a_output+=(" - \"$l_option\" is set to: \"$l_option_value\""
+                "
+        in: \"$l_file\"")
+          done < <("$l_analyze_cmd" cat-config "$l_conf_file" | tac |
+            grep -Pio '^\h*#\h*\/[^#\n\r\h]+\.conf\b')
+          if [ "${#a_output[@]}" -le "0" ]; then
+            l_file="$(readlink -e /etc/"$l_conf_file" ||
+              readlink -e /usr/lib/"$l_conf_file")"
+            l_opt="$(awk '/\['"$l_block"'\]/{a=1;next}/\[/{a=0}a' "$l_file" \
+              2>/dev/null | grep -Poim 1 '^(\h*#)?\h*'"$l_option"'\h*=\h*\H+\b')"
+            l_option_value="$(cut -d= -f2 <<<"${l_opt//# /}" | xargs)"
+            [ -n "$l_option_value" ] &&
+              a_output+=(" - The default value: \"${l_opt//#/}\""
+                "
+        is being used in the configuration")
+          fi
+          [ "${#a_output[@]}" -gt "0" ] && printf '%s\n' "" "${a_output[@]}" ""
+        }
+      register: audit_6_1_1_1_5_0
+      changed_when: false
+      failed_when: "'persistent' not in audit_6_1_1_1_5_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.1.1.5 Ensure journald Storage is configured (Remediation)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          [ ! -d /etc/systemd/journald.conf.d/ ] && mkdir -p /etc/systemd/journald.conf.d/
+          if grep -Psq -- '^\h*\[Journal\]' /etc/systemd/journald.conf.d/60-journald.conf; then
+            printf '%s\n' "Storage=persistent" >> /etc/systemd/journald.conf.d/60-journald.conf
+          else
+            printf '%s\n' "" "[Journal]" "Storage=persistent" >> /etc/systemd/journald.conf.d/60-journald.conf
+          fi
+        }
+        systemctl reload-or-restart systemd-journald
+      register: rem_6_1_1_1_5_0
+      changed_when: rem_6_1_1_1_5_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_1_1_5_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.1.6 Ensure journald Compress is configured
+    # ------------------------------------------------------------
+    - name: "6.1.1.1.6 Ensure journald Compress is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          l_analyze_cmd="$(readlink -e /bin/systemd-analyze ||
+            readlink -e /usr/bin/systemd-analyze)"
+          l_conf_file="systemd/journald.conf" l_block="Journal"
+          l_option="Compress" l_option_value="yes" a_output=()
+          while IFS= read -r l_file; do
+            l_file="${l_file//# /}"
+            l_opt="$(awk '/\['"$l_block"'\]/{a=1;next}/\[/{a=0}a' "$l_file" \
+              2>/dev/null | grep -Poi '^\h*'"$l_option"'\h*=\h*\H+\b' | tail -n 1)"
+            l_option_value="$(cut -d= -f2 <<<"$l_opt" | xargs)"
+            [ -n "$l_option_value" ] &&
+              a_output+=(" - \"$l_option\" is set to: \"$l_option_value\""
+                "
+        in: \"$l_file\"")
+          done < <("$l_analyze_cmd" cat-config "$l_conf_file" | tac |
+            grep -Pio '^\h*#\h*\/[^#\n\r\h]+\.conf\b')
+          if [ "${#a_output[@]}" -le "0" ]; then
+            l_file="$(readlink -e /etc/"$l_conf_file" ||
+              readlink -e /usr/lib/"$l_conf_file")"
+            l_opt="$(awk '/\['"$l_block"'\]/{a=1;next}/\[/{a=0}a' "$l_file" \
+              2>/dev/null | grep -Poim 1 '^(\h*#)?\h*'"$l_option"'\h*=\h*\H+\b')"
+            l_option_value="$(cut -d= -f2 <<<"${l_opt//# /}" | xargs)"
+            [ -n "$l_option_value" ] &&
+              a_output+=(" - The default value: \"${l_opt//#/}\""
+                "
+        is being used in the configuration")
+          fi
+          [ "${#a_output[@]}" -gt "0" ] && printf '%s\n' "" "${a_output[@]}" ""
+        }
+      register: audit_6_1_1_1_6_0
+      changed_when: false
+      failed_when: "'yes' not in audit_6_1_1_1_6_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.1.1.6 Ensure journald Compress is configured (Remediation)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          [ ! -d /etc/systemd/journald.conf.d/ ] && mkdir -p /etc/systemd/journald.conf.d/
+          if grep -Psq -- '^\h*\[Journal\]' /etc/systemd/journald.conf.d/60-journald.conf; then
+            printf '%s\n' "" "Compress=yes" >> /etc/systemd/journald.conf.d/60-journald.conf
+          else
+            printf '%s\n' "" "[Journal]" "Compress=yes" >> /etc/systemd/journald.conf.d/60-journald.conf
+          fi
+        }
+        systemctl reload-or-restart systemd-journald
+      register: rem_6_1_1_1_6_0
+      changed_when: rem_6_1_1_1_6_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_1_1_6_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.2 Configure systemd-journal-remote
+    # ------------------------------------------------------------
+    - name: "6.1.1.2 Configure systemd-journal-remote (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.1.1.2 Configure systemd-journal-remote (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.1.2.1 Ensure systemd-journal-remote is installed
+    # ------------------------------------------------------------
+    - name: "6.1.1.2.1 Ensure systemd-journal-remote is installed (Audit - journald is the active logging backend)"
+      ansible.builtin.shell: |
+        dpkg-query -s systemd-journal-remote &>/dev/null && echo "systemd-journalremote is installed"
+      register: audit_6_1_1_2_1_0
+      changed_when: false
+      failed_when: "'is installed' not in audit_6_1_1_2_1_0.stdout"
+      ignore_errors: true
+      when: cis_logging_backend | default('journald') == 'journald'
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.1.2.1 Ensure systemd-journal-remote is installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get install -y systemd-journal-remote
+      register: rem_6_1_1_2_1_0
+      changed_when: rem_6_1_1_2_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_1_2_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.2 Configure rsyslog
+    # ------------------------------------------------------------
+    - name: "6.1.2 Configure rsyslog (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.1.2 Configure rsyslog (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.1 Ensure rsyslog is installed
+    # ------------------------------------------------------------
+    - name: "6.1.2.1 Ensure rsyslog is installed (Audit - rsyslog is the active logging backend)"
+      ansible.builtin.shell: |
+        dpkg-query -s rsyslog &>/dev/null && echo "rsyslog is installed"
+      register: audit_6_1_2_1_0
+      changed_when: false
+      failed_when: "'rsyslog is installed' not in audit_6_1_2_1_0.stdout"
+      ignore_errors: true
+      when: cis_logging_backend | default('journald') == 'rsyslog'
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.2.1 Ensure rsyslog is installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get install -y rsyslog
+      register: rem_6_1_2_1_0
+      changed_when: rem_6_1_2_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_2_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.2 Ensure rsyslog service is enabled and active
+    # ------------------------------------------------------------
+    - name: "6.1.2.2 Ensure rsyslog service is enabled and active (Audit - rsyslog is the active logging backend)"
+      ansible.builtin.shell: |
+        systemctl is-enabled rsyslog
+        systemctl is-active rsyslog.service
+      register: audit_6_1_2_2_0
+      changed_when: false
+      failed_when: "'enabled' not in audit_6_1_2_2_0.stdout or 'active' not in audit_6_1_2_2_0.stdout"
+      ignore_errors: true
+      when: cis_logging_backend | default('journald') == 'rsyslog'
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.2.2 Ensure rsyslog service is enabled and active (Remediation - rsyslog is the active logging backend)"
+      ansible.builtin.shell: |
+        systemctl unmask rsyslog.service
+        systemctl enable rsyslog.service
+        systemctl start rsyslog.service
+      register: rem_6_1_2_2_0
+      changed_when: rem_6_1_2_2_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_6_1_2_2_0.rc != 0
+        - cis_logging_backend | default('journald') == 'rsyslog'
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.5 Ensure rsyslog logging is configured
+    # ------------------------------------------------------------
+    - name: "6.1.2.5 Ensure rsyslog logging is configured (Audit)"
+      ansible.builtin.shell: |
+        ls -l /var/log/
+      register: audit_6_1_2_5_0
+      changed_when: false
+      failed_when: "audit_6_1_2_5_0.stdout | length == 0"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "6.1.2.5 Ensure rsyslog logging is configured (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required. Edit the lines in /etc/rsyslog.conf and /etc/rsyslog.d/*.conf files as appropriate for your environment. 🚀 Power cores are awesome!"
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.8 Ensure logrotate is configured
+    # ------------------------------------------------------------
+    - name: "6.1.2.8 Ensure logrotate is configured (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "6.1.2.8 Ensure logrotate is configured (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.9 Ensure rsyslog-gnutls is installed
+    # ------------------------------------------------------------
+    - name: "6.1.2.9 Ensure rsyslog-gnutls is installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s rsyslog-gnutls &>/dev/null && echo "rsyslog-gnutls is installed"
+      register: audit_6_1_2_9_0
+      changed_when: false
+      failed_when: "'rsyslog-gnutls is installed' not in audit_6_1_2_9_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.1.2.9 Ensure rsyslog-gnutls is installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get install -y rsyslog-gnutls
+      register: rem_6_1_2_9_0
+      changed_when: rem_6_1_2_9_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_2_9_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.10 Ensure rsyslog forwarding uses gtls
+    # ------------------------------------------------------------
+    - name: "6.1.2.10 Ensure rsyslog forwarding uses gtls (Audit)"
+      ansible.builtin.shell: |
+        grep -Psi -- '^\h*StreamDriver=\"gtls\"' /etc/rsyslog.conf /etc/rsyslog.d/*.conf
+      register: audit_6_1_2_10_0
+      changed_when: false
+      failed_when: "audit_6_1_2_10_0.stdout | length == 0"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.1.2.10 Ensure rsyslog forwarding uses gtls (Remediation)"
+      ansible.builtin.shell: |
+        echo 'global(DefaultNetstreamDriverCAFile="/etc/ssl/certs/ca-certificates.crt")' > /etc/rsyslog.d/40-forward.conf
+        echo 'action(type="omfwd" protocol="tcp" target="logserver.example.com" port="6514" StreamDriver="gtls" StreamDriverMode="1" StreamDriverAuthMode="anon")' >> /etc/rsyslog.d/40-forward.conf
+      register: rem_6_1_2_10_0
+      changed_when: rem_6_1_2_10_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_2_10_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.1.2.11 Ensure rsyslog CA certificates are configured
+    # ------------------------------------------------------------
+    - name: "6.1.2.11 Ensure rsyslog CA certificates are configured (Audit)"
+      ansible.builtin.shell: |
+        grep -Psi -- 'DefaultNetstreamDriverCAFile' /etc/rsyslog.conf
+      register: audit_6_1_2_11_0
+      changed_when: false
+      failed_when: "audit_6_1_2_11_0.stdout | length == 0"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    - name: "6.1.2.11 Ensure rsyslog CA certificates are configured (Remediation)"
+      ansible.builtin.shell: |
+        # Ensure CA certificate is configured properly in /etc/rsyslog.conf or /etc/rsyslog.d/*
+        # Example: global(DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem")
+      register: rem_6_1_2_11_0
+      changed_when: rem_6_1_2_11_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_2_11_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.3 Configure Logfiles
+    # ------------------------------------------------------------
+    - name: "6.1.3 Configure Logfiles (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          a_output=(); a_output2=()
+          f_file_test_chk()
+          {
+            a_out2=()
+            maxperm="$( printf '%o' $(( 0777 & ~$perm_mask)) )"
+            [ $(( $l_mode & $perm_mask )) -gt 0 ] && \
+              a_out2+=("\n o Mode: \"$l_mode\" should be \"$maxperm\" or more restrictive")
+            [[ ! "$l_user" =~ $l_auser ]] && \
+              a_out2+=("\n o Owned by: \"$l_user\" and should be owned by \"${l_auser//|/ or }\"")
+            [[ ! "$l_group" =~ $l_agroup ]] && \
+              a_out2+=("\n o Group owned by: \"$l_group\" and should be group owned by \"${l_agroup//|/ or }\"")
+            [ "${#a_out2[@]}" -gt 0 ] && a_output2+=(" - File: \"$l_fname\" is:" "${a_out2[@]}")
+          }
+          while IFS= read -r -d $'\0' l_file; do
+            while IFS=: read -r l_fname l_mode l_user l_group; do
+              if grep -Pq -- '\/(apt)\h*$' <<< "$(dirname "$l_fname")"; then
+                perm_mask='0133' l_auser="root" l_agroup="(root|adm)"; f_file_test_chk
+              else
+                case "$(basename "$l_fname")" in
+                  lastlog | lastlog.* | wtmp | wtmp.* | wtmp-* | btmp | btmp.* | btmp-* | README)
+                    perm_mask='0113' l_auser="root" l_agroup="(root|utmp)"
+                    f_file_test_chk ;;
+                  cloud-init.log* | localmessages* | waagent.log*)
+                    perm_mask='0133' l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    f_file_test_chk ;;
+                  secure{,*.*,.*,-*} | auth.log | syslog | messages)
+                    perm_mask='0137' l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    f_file_test_chk ;;
+                  *.journal | *.journal~)
+                    perm_mask='0137' l_auser="root" l_agroup="(root|systemd-journal)"
+                    f_file_test_chk ;;
+                  *)
+                    perm_mask='0137' l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    if [ "$l_user" = "root" ] || ! grep -Pq -- "^\h*$(awk -F: '$1==\"'\"$l_user\"'\" {print $7}' /etc/passwd)\b" /etc/shells; then
+                      ! grep -Pq -- "$l_auser" <<< "$l_user" && l_auser="(root|syslog|$l_user)"
+                      ! grep -Pq -- "$l_agroup" <<< "$l_group" && l_agroup="(root|adm|$l_group)"
+                    fi
+                    f_file_test_chk ;;
+                esac
+              fi
+            done < <(stat -Lc '%n:%#a:%U:%G' "$l_file")
+          done < <(find -L /var/log -type f \( -perm /0137 -o ! -user root -o ! -group root \) -print0)
+          
+          if [ "${#a_output2[@]}" -le 0 ]; then
+            a_output+=(" - All files in \"/var/log/\" have appropriate permissions and ownership")
+            printf '\n%s' "- Audit Result:" " ** PASS **" "${a_output[@]}" ""
+          else
+            printf '\n%s' "- Audit Result:" " ** FAIL **" " - Reason(s) for audit failure:" "${a_output2[@]}" ""
+          fi
+        }
+      register: audit_6_1_3_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_6_1_3_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "6.1.3 Configure Logfiles (Remediation)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          a_output2=()
+          f_file_test_fix()
+          {
+            a_out2=()
+            maxperm="$( printf '%o' $(( 0777 & ~$perm_mask)) )"
+            if [ $(( $l_mode & $perm_mask )) -gt 0 ]; then
+              a_out2+=("\n o Mode: \"$l_mode\" should be \"$maxperm\" or more restrictive" "\n x Removing excess permissions")
+              chmod "$l_rperms" "$l_fname"
+            fi
+            if [[ ! "$l_user" =~ $l_auser ]]; then
+              a_out2+=("\n o Owned by: \"$l_user\" and should be owned by \"${l_auser//|/ or }\"" "\n x Changing ownership to: \"$l_fix_account\"")
+              chown "$l_fix_account" "$l_fname"
+            fi
+            if [[ ! "$l_group" =~ $l_agroup ]]; then
+              a_out2+=("\n o Group owned by: \"$l_group\" and should be group owned by \"${l_agroup//|/ or }\"" "\n x Changing group ownership to: \"$l_fix_account\"")
+              chgrp "$l_fix_account" "$l_fname"
+            fi
+            [ "${#a_out2[@]}" -gt 0 ] && a_output2+=(" - File: \"$l_fname\" is:" "${a_out2[@]}")
+          }
+          l_fix_account='root'
+          while IFS= read -r -d $'\0' l_file; do
+            while IFS=: read -r l_fname l_mode l_user l_group; do
+              if grep -Pq -- '\/(apt)\h*$' <<< "$(dirname "$l_fname")"; then
+                perm_mask='0133' l_rperms="u-x,go-wx" l_auser="root" l_agroup="(root|adm)"; f_file_test_fix
+              else
+                case "$(basename "$l_fname")" in
+                  lastlog | lastlog.* | wtmp | wtmp.* | wtmp-* | btmp | btmp.* | btmp-* | README)
+                    perm_mask='0113' l_rperms="ug-x,o-wx" l_auser="root" l_agroup="(root|utmp)"
+                    f_file_test_fix ;;
+                  cloud-init.log* | localmessages* | waagent.log*)
+                    perm_mask='0133' l_rperms="u-x,go-wx" l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    f_file_test_fix ;;
+                  secure | auth.log | syslog | messages)
+                    perm_mask='0137' l_rperms="u-x,g-wx,o-rwx" l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    f_file_test_fix ;;
+                  *.journal | *.journal~)
+                    perm_mask='0137' l_rperms="u-x,g-wx,o-rwx" l_auser="root" l_agroup="(root|systemd-journal)"
+                    f_file_test_fix ;;
+                  *)
+                    perm_mask='0137' l_rperms="u-x,g-wx,o-rwx" l_auser="(root|syslog)" l_agroup="(root|adm)"
+                    if [ "$l_user" = "root" ] || ! grep -Pq -- "^\h*$(awk -F: '$1=="'"$l_user"'" {print $7}' /etc/passwd)\b" /etc/shells; then
+                      ! grep -Pq -- "$l_auser" <<< "$l_user" && l_auser="(root|syslog|$l_user)"
+                      ! grep -Pq -- "$l_agroup" <<< "$l_group" && l_agroup="(root|adm|$l_group)"
+                    fi
+                    f_file_test_fix ;;
+                esac
+              fi
+            done < <(stat -Lc '%n:%#a:%U:%G' "$l_file")
+          done < <(find -L /var/log -type f \( -perm /0137 -o ! -user root -o ! -group root \) -print0)
+          
+          if [ "${#a_output2[@]}" -le 0 ]; then
+            printf '\n%s' "- All files in \"/var/log/\" have appropriate permissions and ownership" "\n o No changes required" ""
+          else
+            printf '\n%s' "${a_output2[@]}" ""
+          fi
+        }
+      register: rem_6_1_3_0
+      changed_when: rem_6_1_3_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_3_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.1.3.1 Ensure access to all logfiles has been configured
+    # ------------------------------------------------------------
+    - name: "6.1.3.1 Ensure access to all logfiles has been configured (Audit)"
+      ansible.builtin.shell: |-
+        find /var/log -type f -exec stat -Lc '%n %a %U %G' {} + | awk '$2 > 640 || $3 != "root" || $4 != "root" { print $1 }'
+      register: audit_6_1_3_1_0
+      changed_when: false
+      failed_when: audit_6_1_3_1_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.1.3.1 Ensure access to all logfiles has been configured (Remediation)"
+      ansible.builtin.shell: |-
+        find /var/log -type f -exec chmod g-wx,o-rwx {} + 2>/dev/null || true
+        find /var/log -type f -exec chown root:root {} + 2>/dev/null || true
+      register: rem_6_1_3_1_0
+      changed_when: rem_6_1_3_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_1_3_1_0.stdout | length > 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2 System Auditing
+    # ------------------------------------------------------------
+    - name: "6.2 System Auditing (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.2 System Auditing (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.2.1 Configure auditd Service
+    # ------------------------------------------------------------
+    - name: "6.2.1 Configure auditd Service (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.2.1 Configure auditd Service (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.2.1.1 Ensure auditd packages are installed
+    # ------------------------------------------------------------
+    - name: "6.2.1.1 Ensure auditd packages are installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s auditd &>/dev/null && echo "auditd is installed"
+        dpkg-query -s audispd-plugins &>/dev/null && echo "audispd-plugins is installed"
+      register: audit_6_2_1_1_0
+      changed_when: false
+      failed_when: "'auditd is installed' not in audit_6_2_1_1_0.stdout or 'audispd-plugins is installed' not in audit_6_2_1_1_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.1.1 Ensure auditd packages are installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get install -y auditd audispd-plugins
+      register: rem_6_2_1_1_0
+      changed_when: rem_6_2_1_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_1_1_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.1.2 Ensure auditd service is enabled and active
+    # ------------------------------------------------------------
+    - name: "6.2.1.2 Ensure auditd service is enabled and active (Audit)"
+      ansible.builtin.shell: |
+        systemctl is-enabled auditd | grep '^enabled'
+        systemctl is-active auditd | grep '^active'
+      register: audit_6_2_1_2_0
+      changed_when: false
+      failed_when: "'enabled' not in audit_6_2_1_2_0.stdout or 'active' not in audit_6_2_1_2_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.1.2 Ensure auditd service is enabled and active (Remediation)"
+      ansible.builtin.shell: |
+        systemctl unmask auditd
+        systemctl enable auditd
+        systemctl start auditd
+      register: rem_6_2_1_2_0
+      changed_when: rem_6_2_1_2_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_1_2_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.1.4 Ensure audit_backlog_limit is configured
+    # ------------------------------------------------------------
+    - name: "6.2.1.4 Ensure audit_backlog_limit is configured (Audit)"
+      ansible.builtin.shell: |
+        find /boot -type f -name 'grub.cfg' -exec grep -Ph -- '^\h*linux' {} + | grep -Pv 'audit_backlog_limit=\d+\b'
+      register: audit_6_2_1_4_0
+      changed_when: false
+      failed_when: "audit_6_2_1_4_0.stdout | length > 0"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.1.4 Ensure audit_backlog_limit is configured (Remediation)"
+      ansible.builtin.shell: |
+        printf "\n%s\n" 'GRUB_CMDLINE_LINUX="audit_backlog_limit=8192"' >> /etc/default/grub.d/40-custom.cfg
+        update-grub
+      register: rem_6_2_1_4_0
+      changed_when: rem_6_2_1_4_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_1_4_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.2 Configure Data Retention
+    # ------------------------------------------------------------
+    - name: "6.2.2 Configure Data Retention (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.2.2 Configure Data Retention (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.2.2.1 Ensure audit log storage size is configured
+    # ------------------------------------------------------------
+    - name: "6.2.2.1 Ensure audit log storage size is configured (Audit)"
+      ansible.builtin.shell: |
+        grep -Po -- '^\h*max_log_file\h*=\h*\d+\b' /etc/audit/auditd.conf
+      register: audit_6_2_2_1_0
+      changed_when: false
+      failed_when: "audit_6_2_2_1_0.stdout | length == 0"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.2.1 Ensure audit log storage size is configured (Remediation)"
+      ansible.builtin.lineinfile:
+        path: /etc/audit/auditd.conf
+        regexp: '^\s*max_log_file\s*='
+        line: 'max_log_file = 8'
+        state: present
+        create: yes
+      register: rem_6_2_2_1_0
+      ignore_errors: true
+      when: audit_6_2_2_1_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.3 Configure auditd Rules
+    # ------------------------------------------------------------
+    - name: "6.2.3 Configure auditd Rules (Audit)"
+      ansible.builtin.shell: |
+        auditctl -l | grep -Ps -- '^\h*[^#\n\r]+\h*\/etc\/sudoers'
+        grep -Ps -- '^\h*[^#\n\r]+\h*\/etc\/sudoers' /etc/audit/rules.d/*.rules
+      register: audit_6_2_3_0
+      changed_when: false
+      failed_when: "'path=/etc/sudoers' not in audit_6_2_3_0.stdout or 'dir=/etc/sudoers.d' not in audit_6_2_3_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    - name: "6.2.3 Configure auditd Rules (Remediation)"
+      ansible.builtin.shell: |
+        printf '%s\n' "-a always,exit -F arch=b64 -S all -F path=/etc/sudoers -F perm=wa -k scope" "-a always,exit -F arch=b64 -S all -F dir=/etc/sudoers.d -F perm=wa -k scope" >> /etc/audit/rules.d/50-scope.rules
+        augenrules --load
+        if [[ $(auditctl -s | grep "enabled") =~ "2" ]]; then printf "Reboot required to load rules\n"; fi
+      register: rem_6_2_3_0
+      changed_when: rem_6_2_3_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_3_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.2.3.1 Ensure modification of the /etc/sudoers file is collected
+    # ------------------------------------------------------------
+    - name: "6.2.3.1 Ensure modification of the /etc/sudoers file is collected (Audit)"
+      ansible.builtin.shell: |-
+        auditctl -l | grep -Ps -- '^\h*[^#\n\r]+\h*\/etc\/sudoers'
+      register: audit_6_2_3_1_0
+      changed_when: false
+      failed_when: audit_6_2_3_1_0.rc != 0
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.3.1 Ensure modification of the /etc/sudoers file is collected (Remediation)"
+      ansible.builtin.shell: |-
+        echo "-a always,exit -F path=/etc/sudoers -F perm=wa -k scope" >> /etc/audit/rules.d/50-scope.rules
+        echo "-a always,exit -F dir=/etc/sudoers.d -F perm=wa -k scope" >> /etc/audit/rules.d/50-scope.rules
+        augenrules --load
+      register: rem_6_2_3_1_0
+      changed_when: rem_6_2_3_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_3_1_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.3.36 Ensure the audit configuration is immutable
+    # ------------------------------------------------------------
+    - name: "6.2.3.36 Ensure the audit configuration is immutable (Audit)"
+      ansible.builtin.shell: |
+        grep -Ph -- '^\h*-e\h+2\b' /etc/audit/rules.d/*.rules | tail -1
+      register: audit_6_2_3_36_0
+      changed_when: false
+      failed_when: "audit_6_2_3_36_0.stdout.strip() != '-e 2'"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.3.36 Ensure the audit configuration is immutable (Remediation)"
+      ansible.builtin.shell: |
+        printf '\n%s' "-e 2" >> /etc/audit/rules.d/99-finalize.rules
+        augenrules --load
+        if [[ $(auditctl -s | grep "enabled") =~ "2" ]]; then printf "Reboot required to load rules\n"; fi
+      register: rem_6_2_3_36_0
+      changed_when: rem_6_2_3_36_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_3_36_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.4 Configure auditd File Access
+    # ------------------------------------------------------------
+    - name: "6.2.4 Configure auditd File Access (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.2.4 Configure auditd File Access (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.2.4.1 Ensure audit log files mode is configured
+    # ------------------------------------------------------------
+    - name: "6.2.4.1 Ensure audit log files mode is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          l_perm_mask="0137"
+          if [ -e "/etc/audit/auditd.conf" ]; then
+            l_audit_log_directory="$(dirname "$(awk -F= '/^\s*log_file\s*/{print
+        $2}' /etc/audit/auditd.conf | xargs)")"
+            if [ -d "$l_audit_log_directory" ]; then
+              l_maxperm="$(printf '%o' $((0777 & ~$l_perm_mask)))"
+              a_files=()
+              while IFS= read -r -d $'\0' l_file; do
+                [ -e "$l_file" ] && a_files+=("$l_file")
+              done < <(
+                find "$l_audit_log_directory" -maxdepth 1 -type f -perm
+                /"$l_perm_mask" -print0
+              )
+              if (("${#a_files[@]}" > 0)); then
+                for l_file in "${a_files[@]}"; do
+                  l_file_mode="$(stat -Lc '%#a' "$l_file")"
+                  echo -e "\n- Audit Result:\n ** FAIL **\n - File:
+        \"$l_file\" is mode: \"$l_file_mode\"\n
+        (should be mode: \"$l_maxperm"
+        or more restrictive)\n"
+                done
+              else
+                echo -e "\n- Audit Result:\n ** PASS **\n - All files in
+        \"$l_audit_log_directory\" are mode: \"$l_maxperm\" or more restrictive"
+              fi
+            else
+              echo -e "\n- Audit Result:\n ** FAIL **\n - Log file directory not
+        set in \"/etc/audit/auditd.conf\" please set log file directory"
+            fi
+          else
+            echo -e "\n- Audit Result:\n ** FAIL **\n - File:
+        \"/etc/audit/auditd.conf\" not found.\n - ** Verify auditd is installed **"
+          fi
+        }
+      register: audit_6_2_4_1_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_6_2_4_1_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.4.1 Ensure audit log files mode is configured (Remediation)"
+      ansible.builtin.shell: |
+        [ -f /etc/audit/auditd.conf ] && find "$(dirname $(awk -F "=" '/^\s*log_file/ {print $2}' /etc/audit/auditd.conf | xargs))" -type f -perm /0137 -exec chmod u-x,g-wx,o-rwx {} +
+      register: rem_6_2_4_1_0
+      changed_when: rem_6_2_4_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_4_1_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.4.2 Ensure audit log files owner is configured
+    # ------------------------------------------------------------
+    - name: "6.2.4.2 Ensure audit log files owner is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          l_output="" l_output2=""
+          if [ -e "/etc/audit/auditd.conf" ]; then
+            l_audit_log_directory="$(dirname "$(awk -F= '/^\s*log_file\s*/{print
+        $2}' /etc/audit/auditd.conf | xargs)")"
+            if [ -d "$l_audit_log_directory" ]; then
+              while IFS= read -r -d $'\0' l_file; do
+                l_output2="$l_output2\n - File: \"$l_file\" is owned by user:
+        \"$(stat -Lc '%U' "$l_file")\"\n
+        (should be owned by user: \"root\")\n"
+              done < <(
+                find "$l_audit_log_directory" -maxdepth 1 -type f ! -user
+                root -print0
+              )
+            else
+              l_output2="$l_output2\n - Log file directory not set in
+        \"/etc/audit/auditd.conf\" please set log file directory"
+            fi
+          else
+            l_output2="$l_output2\n - File: \"/etc/audit/auditd.conf\" not
+        found.\n - ** Verify auditd is installed **"
+          fi
+          if [ -z "$l_output2" ]; then
+            l_output="$l_output\n - All files in \"$l_audit_log_directory\" are
+        owned by user: \"root\"\n"
+            echo -e "\n- Audit Result:\n ** PASS **\n - * Correctly configured *
+        :$l_output"
+          else
+            echo -e "\n- Audit Result:\n ** FAIL **\n - * Reasons for audit
+        failure * :$l_output2\n"
+          fi
+        }
+      register: audit_6_2_4_2_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_6_2_4_2_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.4.2 Ensure audit log files owner is configured (Remediation)"
+      ansible.builtin.shell: |
+        [ -f /etc/audit/auditd.conf ] && find "$(dirname $(awk -F "=" '/^\s*log_file/ {print $2}' /etc/audit/auditd.conf | xargs))" -type f ! -user root -exec chown root {} +
+      register: rem_6_2_4_2_0
+      changed_when: rem_6_2_4_2_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_4_2_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.4.8 Ensure audit tools mode is configured
+    # ------------------------------------------------------------
+    - name: "6.2.4.8 Ensure audit tools mode is configured (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          l_output="" l_output2="" l_perm_mask="0022"
+          l_maxperm="$(printf '%o' $((0777 & ~$l_perm_mask)))"
+          a_audit_tools=("/sbin/auditctl" "/sbin/aureport" "/sbin/ausearch"
+            "/sbin/auditd" "/sbin/augenrules")
+          for l_audit_tool in "${a_audit_tools[@]}"; do
+            l_mode="$(stat -Lc '%#a' "$l_audit_tool")"
+            if [ $(("$l_mode" & "$l_perm_mask")) -gt 0 ]; then
+              l_output2="$l_output2\n - Audit tool \"$l_audit_tool\" is mode:
+        \"$l_mode\" and should be mode: \"$l_maxperm\" or more restrictive"
+            else
+              l_output="$l_output\n - Audit tool \"$l_audit_tool\" is correctly
+        configured to mode: \"$l_mode\""
+            fi
+          done
+          if [ -z "$l_output2" ]; then
+            echo -e "\n- Audit Result:\n ** PASS **\n - * Correctly configured *
+        :$l_output"
+          else
+            echo -e "\n- Audit Result:\n ** FAIL **\n - * Reasons for audit
+        failure * :$l_output2\n"
+            [ -n "$l_output" ] && echo -e "\n - * Correctly configured *
+        :\n$l_output\n"
+          fi
+          unset a_audit_tools
+        }
+      register: audit_6_2_4_8_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_6_2_4_8_0.stdout"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.4.8 Ensure audit tools mode is configured (Remediation)"
+      ansible.builtin.shell: |
+        chmod go-w /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/auditd /sbin/augenrules
+      register: rem_6_2_4_8_0
+      changed_when: rem_6_2_4_8_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_4_8_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.2.4.9 Ensure audit tools owner is configured
+    # ------------------------------------------------------------
+    - name: "6.2.4.9 Ensure audit tools owner is configured (Audit)"
+      ansible.builtin.shell: |
+        stat -Lc "%n %U" /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/auditd /sbin/augenrules | awk '$2 != "root" {print}'
+      register: audit_6_2_4_9_0
+      changed_when: false
+      failed_when: "audit_6_2_4_9_0.stdout | length > 0"
+      ignore_errors: true
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "6.2.4.9 Ensure audit tools owner is configured (Remediation)"
+      ansible.builtin.shell: |
+        chown root /sbin/auditctl /sbin/aureport /sbin/ausearch /sbin/auditd /sbin/augenrules
+      register: rem_6_2_4_9_0
+      changed_when: rem_6_2_4_9_0.rc == 0
+      ignore_errors: true
+      when: audit_6_2_4_9_0.rc != 0
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.3 Configure Integrity Checking
+    # ------------------------------------------------------------
+    - name: "6.3 Configure Integrity Checking (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "6.3 Configure Integrity Checking (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 6.3.1 Ensure AIDE is installed
+    # ------------------------------------------------------------
+    - name: "6.3.1 Ensure AIDE is installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s aide &>/dev/null && echo "aide is installed"
+        dpkg-query -s aide-common &>/dev/null && echo "aide-common is installed"
+      register: audit_6_3_1_0
+      changed_when: false
+      failed_when: "'aide is installed' not in audit_6_3_1_0.stdout or 'aide-common is installed' not in audit_6_3_1_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.3.1 Ensure AIDE is installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get install -y aide aide-common
+        aideinit
+        mv /var/lib/aide/aide.db.new /var/lib/aide/aide.db
+      register: rem_6_3_1_0
+      changed_when: rem_6_3_1_0.rc == 0
+      ignore_errors: true
+      when: audit_6_3_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 6.3.2 Ensure filesystem integrity is regularly checked
+    # ------------------------------------------------------------
+    - name: "6.3.2 Ensure filesystem integrity is regularly checked (Audit)"
+      ansible.builtin.shell: |
+        systemctl list-unit-files | awk '$1~/^dailyaidecheck\.(timer|service)$/{print $1 "\t" $2}'
+        systemctl is-active dailyaidecheck.timer
+      register: audit_6_3_2_0
+      changed_when: false
+      failed_when: "'active' not in audit_6_3_2_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "6.3.2 Ensure filesystem integrity is regularly checked (Remediation)"
+      ansible.builtin.shell: |
+        systemctl unmask dailyaidecheck.timer dailyaidecheck.service
+        systemctl --now enable dailyaidecheck.timer
+      register: rem_6_3_2_0
+      changed_when: rem_6_3_2_0.rc == 0
+      ignore_errors: true
+      when: audit_6_3_2_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  post_tasks:
+    - name: "Clean up the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: absent
+      register: temp_cleanup
+      changed_when: temp_cleanup.changed
+
