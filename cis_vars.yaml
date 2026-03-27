@@ -1,0 +1,39 @@
+# CIS Debian 13 Benchmark Configuration Variables
+# Override these variables in your inventory or playbook as needed.
+
+# Time synchronization daemon to use ('systemd-timesyncd' or 'chrony')
+cis_time_synchronization_daemon: 'systemd-timesyncd'
+
+# Logging backend to use ('journald' or 'rsyslog')
+cis_logging_backend: 'journald'
+
+# Whether motd should be used
+cis_use_motd: true
+
+# Whether Match set statements are used in SSH
+cis_ssh_match_set_used: false
+
+# Service dependencies required by the system (set to true if needed)
+cis_autofs_required: false
+cis_avahi_required: false
+cis_bluez_required: false
+cis_dhcp_dependency_required: false
+cis_dns_dependency_required: false
+cis_dnsmasq_dependency_required: false
+cis_ftp_dependency_required: false
+cis_ldap_dependency_required: false
+cis_nis_dependency_required: false
+cis_print_dependency_required: false
+cis_rpcbind_dependency_required: false
+cis_rsync_dependency_required: false
+cis_snmp_dependency_required: false
+cis_telnet_server_dependency_required: false
+cis_tftp_dependency_required: false
+cis_web_dependency_required: false
+cis_xinetd_dependency_required: false
+
+# Whether Docker is used on the host
+docker_is_used: true
+
+# Whether UFW is used on the host
+ufw_is_used: false
