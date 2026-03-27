@@ -1,0 +1,190 @@
+---
+- name: "CIS Debian Linux 13 Benchmark Chapter 4 Playbook"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - cis_vars.yaml
+
+  vars:
+    host_dest_dir_temp_base: "/tmp/cis_temp_dir"
+    host_dest_file_ssh_config: "/etc/ssh/sshd_config"
+
+  pre_tasks:
+    - name: "Get current timestamp with millisecond precision"
+      ansible.builtin.command: date +%s%3N
+      register: timestamp_ms
+      changed_when: false
+
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Set temporary directory variable with timestamp"
+      ansible.builtin.set_fact:
+        host_dest_dir_temp_cis: "{{ host_dest_dir_temp_base }}_{{ timestamp_ms.stdout }}"
+
+    - name: "Create the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: directory
+        mode: "0700"
+        owner: root
+        group: root
+      register: temp_dir_creation
+      changed_when: temp_dir_creation.changed
+
+  tasks:
+    # ------------------------------------------------------------
+    # 4.1 Configure Uncomplicated Firewall
+    # ------------------------------------------------------------
+    - name: "4.1 Configure Uncomplicated Firewall (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      when: ufw_is_used | default(false)
+      tags: ["cis", "manual"]
+
+    - name: "4.1 Configure Uncomplicated Firewall (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      when: ufw_is_used | default(false)
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 4.1.1 Ensure ufw is installed
+    # ------------------------------------------------------------
+    - name: "4.1.1 Ensure ufw is installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s ufw &>/dev/null && echo "ufw is installed" || true
+      register: audit_4_1_1_0
+      changed_when: false
+      failed_when: "'ufw is installed' not in audit_4_1_1_0.stdout"
+      ignore_errors: true
+      when: ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "4.1.1 Ensure ufw is installed (Remediation)"
+      ansible.builtin.shell: |
+        apt install -y ufw
+      register: rem_4_1_1_0
+      changed_when: rem_4_1_1_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_4_1_1_0.failed
+        - ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 4.1.2 Ensure ufw service is configured
+    # ------------------------------------------------------------
+    - name: "4.1.2 Ensure ufw service is configured (Audit)"
+      ansible.builtin.shell: |
+        systemctl is-enabled ufw.service || true
+        systemctl is-active ufw.service || true
+        ufw status || true
+      register: audit_4_1_2_0
+      changed_when: false
+      failed_when: >
+        not (audit_4_1_2_0.stdout | regex_search('(?m)^enabled$')) or
+        not (audit_4_1_2_0.stdout | regex_search('(?m)^active$')) or
+        not (audit_4_1_2_0.stdout | regex_search('(?m)^Status:\s+active$'))
+      ignore_errors: true
+      when: ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "4.1.2 Ensure ufw service is configured (Remediation)"
+      ansible.builtin.shell: |
+        systemctl unmask ufw.service
+        systemctl --now enable ufw.service
+        ufw --force enable
+      register: rem_4_1_2_0
+      changed_when: rem_4_1_2_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_4_1_2_0.failed
+        - ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 4.1.3 Ensure ufw incoming default is configured
+    # ------------------------------------------------------------
+    - name: "4.1.3 Ensure ufw incoming default is configured (Audit)"
+      ansible.builtin.shell: |
+        ufw status verbose | awk -F',' '$1~/Default/ {print $1}'
+      register: audit_4_1_3_0
+      changed_when: false
+      failed_when: >
+        not (audit_4_1_3_0.stdout | regex_search('(?m)^Default:\s+(deny|reject)\s+\(incoming\)'))
+      ignore_errors: true
+      when: ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "4.1.3 Ensure ufw incoming default is configured (Remediation)"
+      ansible.builtin.shell: |
+        ufw default deny incoming
+      register: rem_4_1_3_0
+      changed_when: rem_4_1_3_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_4_1_3_0.failed
+        - ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 4.1.4 Ensure ufw outgoing default is configured
+    # ------------------------------------------------------------
+    - name: "4.1.4 Ensure ufw outgoing default is configured (Audit)"
+      ansible.builtin.shell: |
+        ufw status verbose | awk -F',' '$1~/Default/ {print $2}'
+      register: audit_4_1_4_0
+      changed_when: false
+      failed_when: >
+        not (audit_4_1_4_0.stdout | regex_search('(?m)^\s*(deny|reject)\s*\(outgoing\)'))
+      ignore_errors: true
+      when: ufw_is_used | default(false)
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "4.1.4 Ensure ufw outgoing default is configured (Remediation)"
+      ansible.builtin.shell: |
+        ufw default deny outgoing
+      register: rem_4_1_4_0
+      changed_when: rem_4_1_4_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_4_1_4_0.failed
+        - ufw_is_used | default(false)
+      tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 4.1.5 Ensure ufw routed default is configured
+    # ------------------------------------------------------------
+    - name: "4.1.5 Ensure ufw routed default is configured (Audit)"
+      ansible.builtin.shell: |
+        ufw status verbose | awk -F',' '$1~/Default/ {print $3}'
+      register: audit_4_1_5_0
+      changed_when: false
+      failed_when: >
+        not (audit_4_1_5_0.stdout | regex_search('(?m)^\s*(disabled|deny)\s*\(routed\)'))
+      ignore_errors: true
+      when: ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "4.1.5 Ensure ufw routed default is configured (Remediation)"
+      ansible.builtin.shell: |
+        ufw default disabled routed
+      register: rem_4_1_5_0
+      changed_when: rem_4_1_5_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_4_1_5_0.failed
+        - ufw_is_used | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  post_tasks:
+    - name: "Clean up the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: absent
+      register: temp_cleanup
+      changed_when: temp_cleanup.changed
