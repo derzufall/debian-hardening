@@ -144,10 +144,10 @@
 
   - name: "5.1.5 Ensure sshd Banner is configured (Audit - Match set statements are
       used in SSH)"
-    ansible.builtin.shell: |
-      sshd -T -C user=sshuser | grep -Pi -- '^banner\h+\/\H+'
-      [ -e "$(sshd -T | awk '$1 == "banner" {print $2}')" ] && cat "$(sshd -T |
-      grep -Psi -- "(\\\v|\\\r|\\\m|\\\s|\b$(grep '^ID=' /etc/os-release | cut d= -f2 | sed -e 's/"//g')\b)" "$(sshd -T | awk '$1 == "banner" {print $2}')"
+    ansible.builtin.shell:
+      cmd: |
+        sshd -T -C user=sshuser | grep -Pi -- '^banner\h+\/\H+'
+        [ -e "$(sshd -T | awk '$1 == "banner" {print $2}')" ] && cat "$(sshd -T | awk '$1 == "banner" {print $2}')" | grep -Psi -- "(\\\v|\\\r|\\\m|\\\s|\b$(grep '^ID=' /etc/os-release | cut -d= -f2 | sed -e 's/\"//g')\b)"
     register: audit_5_1_5_1
     changed_when: false
     failed_when: audit_5_1_5_1.stdout | length == 0
@@ -186,9 +186,9 @@
     register: rem_5_1_6_0
     changed_when: rem_5_1_6_0.rc == 0
     ignore_errors: true
-      when:
-        - audit_5_1_6_0.rc != 0
-      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    when:
+      - audit_5_1_6_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
     # 5.1.8 Ensure sshd DisableForwarding is enabled
@@ -1339,43 +1339,40 @@
     # 5.4.2.5 Ensure root path integrity
     # ------------------------------------------------------------
   - name: "5.4.2.5 Ensure root path integrity (Audit)"
-    ansible.builtin.shell: |
-      #!/usr/bin/env bash
-      {
-        a_output2=() l_pmask="0022"
-        l_maxperm="$(printf '%o' $((0777 & ~$l_pmask)))"
-        l_root_path="$(sudo su - root -c env | awk -F= '$1=="PATH"{print $2}')"
-        IFS=":" read -ra a_path_loc <<<"$l_root_path"
-        grep -q -- "::" <<<"$l_root_path" &&
-          a_output2+=(" - root's path contains a empty directory (::)")
-        grep -Pq -- ":\h*$" <<<"$l_root_path" &&
-          a_output2+=(" - root's path contains a trailing (:)")
-        grep -Pq -- '(^\h*|:)\.(:|\h*$)' <<<"$l_root_path" &&
-          a_output2+=(" - root's path contains current working directory (.)")
-        for l_path in "${a_path_loc[@]}"; do
-          if [ -d "$l_path" ]; then
-            while IFS=: read -r l_fmode l_fown; do
-              [ "$l_fown" != "root" ] &&
-                a_output2+=(" - Directory: \"$l_path\" is owned by: \"$l_fown\""
-                  '
-      should be owned by "root"')
-              [ $((l_fmode & l_pmask)) -gt 0 ] &&
-                a_output2+=(" - Directory: \"$l_path\" is mode: \"$l_fmode\""
-                  "
-      and should be mode: \"$l_maxperm\" or more restrictive")
-            done <<<"$(stat -Lc '%#a:%U' "$l_path")"
+    ansible.builtin.shell:
+      cmd: |
+        #!/usr/bin/env bash
+        {
+          a_output2=() l_pmask="0022"
+          l_maxperm="$(printf '%o' $((0777 & ~$l_pmask)))"
+          l_root_path="$(sudo su - root -c env | awk -F= '$1=="PATH"{print $2}')"
+          IFS=":" read -ra a_path_loc <<<"$l_root_path"
+          grep -q -- "::" <<<"$l_root_path" &&
+            a_output2+=(" - root's path contains a empty directory (::)")
+          grep -Pq -- ":\h*$" <<<"$l_root_path" &&
+            a_output2+=(" - root's path contains a trailing (:)")
+          grep -Pq -- '(^\h*|:)\.(:|\h*$)' <<<"$l_root_path" &&
+            a_output2+=(" - root's path contains current working directory (.)")
+          for l_path in "${a_path_loc[@]}"; do
+            if [ -d "$l_path" ]; then
+              while IFS=: read -r l_fmode l_fown; do
+                [ "$l_fown" != "root" ] &&
+                  a_output2+=(" - Directory: \"$l_path\" is owned by: \"$l_fown\"" 'should be owned by "root"')
+                [ $((l_fmode & l_pmask)) -gt 0 ] &&
+                  a_output2+=(" - Directory: \"$l_path\" is mode: \"$l_fmode\"" "and should be mode: \"$l_maxperm\" or more restrictive")
+              done <<<"$(stat -Lc '%#a:%U' "$l_path")"
+            else
+              a_output2+=(" - \"$l_path\" is not a directory")
+            fi
+          done
+          if [ "${#a_output2[@]}" -le 0 ]; then
+            printf '%s\n' "" "- Audit Result:" " ** PASS **" \
+              " - Root's path is correctly configured"
           else
-            a_output2+=(" - \"$l_path\" is not a directory")
+            printf '%s\n' "" "- Audit Result:" " ** FAIL **" \
+              "- * Reasons for audit failure * :" "${a_output2[@]}"
           fi
-        done
-        if [ "${#a_output2[@]}" -le 0 ]; then
-          printf '%s\n' "" "- Audit Result:" " ** PASS **" \
-            " - Root's path is correctly configured"
-        else
-          printf '%s\n' "" "- Audit Result:" " ** FAIL **" \
-            "- * Reasons for audit failure * :" "${a_output2[@]}"
-        fi
-      }
+        }
     register: audit_5_4_2_5_0
     changed_when: false
     failed_when: "'** FAIL **' in audit_5_4_2_5_0.stdout"
