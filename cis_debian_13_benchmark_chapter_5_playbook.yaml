@@ -1,0 +1,1476 @@
+- name: "CIS Debian Linux 13 Benchmark Chapter 5 Playbook"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - cis_vars.yaml
+
+  vars:
+    host_dest_dir_temp_base: "/tmp/cis_temp_dir"
+    host_dest_file_ssh_config: "/etc/ssh/sshd_config"
+
+  pre_tasks:
+  - name: "Get current timestamp with millisecond precision"
+    ansible.builtin.command: date +%s%3N
+    register: timestamp_ms
+    changed_when: false
+
+  - name: "Gather package facts"
+    ansible.builtin.package_facts:
+      manager: auto
+
+  - name: "Set temporary directory variable with timestamp"
+    ansible.builtin.set_fact:
+      host_dest_dir_temp_cis: "{{ host_dest_dir_temp_base }}_{{ timestamp_ms.stdout
+        }}"
+
+  - name: "Create the temporary directory"
+    ansible.builtin.file:
+      path: "{{ host_dest_dir_temp_cis }}"
+      state: directory
+      mode: "0700"
+      owner: root
+      group: root
+    register: temp_dir_creation
+    changed_when: temp_dir_creation.changed
+
+  tasks:
+    # ------------------------------------------------------------
+    # 5.1 Configure SSH Server
+    # ------------------------------------------------------------
+  - name: "5.1 Configure SSH Server (Audit)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      stat -Lc 'File: "%n" Mode: "%#a" Owner: "%U" Group: "%G"' /etc/ssh/sshd_config
+      {
+      while IFS= read -r -d $'\0' l_file; do
+      stat -Lc 'File: "%n" Mode: "%#a" Owner: "%U" Group: "%G"' "$l_file"
+      done < <(find /etc/ssh/sshd_config.d/ -xdev -mount -type f -name '*.conf' \( -perm /077 -o ! -user root -o ! -group root \) -print0 2>/dev/null)
+      }
+    register: audit_5_1_0
+    changed_when: false
+    failed_when: audit_5_1_0.stdout | length == 0 or '0600' not in audit_5_1_0.stdout
+      or 'root' not in audit_5_1_0.stdout
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", automated]
+
+  - name: "5.1 Configure SSH Server (Remediation)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        chmod u-x,og-rwx /etc/ssh/sshd_config
+        chown root:root /etc/ssh/sshd_config
+        while IFS= read -r -d $'\0' l_file; do
+          if [ -e "$l_file" ]; then
+            chmod u-x,og-rwx "$l_file"
+            chown root:root "$l_file"
+          fi
+        done < <(find /etc/ssh/sshd_config.d -type f -print0 2>/dev/null)
+      }
+    register: rem_5_1_0
+    changed_when: rem_5_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.1.1 Ensure access to /etc/ssh/sshd_config is configured
+    # ------------------------------------------------------------
+  - name: "5.1.1 Ensure access to /etc/ssh/sshd_config is configured (Audit)"
+    ansible.builtin.shell: |-
+      stat -Lc 'Mode: "%#a" Owner: "%U" Group: "%G"' /etc/ssh/sshd_config | grep -E -q 'Mode: "(0600|0400)" Owner: "root" Group: "root"'
+    register: audit_5_1_1_0
+    changed_when: false
+    failed_when: audit_5_1_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.1 Ensure access to /etc/ssh/sshd_config is configured (Remediation)"
+    ansible.builtin.shell: |-
+      chown root:root /etc/ssh/sshd_config 2>/dev/null || true
+      chmod 0600 /etc/ssh/sshd_config 2>/dev/null || true
+    register: rem_5_1_1_0
+    changed_when: rem_5_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.1.4 Ensure sshd access is configured
+    # ------------------------------------------------------------
+  - name: "5.1.4 Ensure sshd access is configured (Audit - Default fallback (not Match
+      set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep -Pi -- '^\h*(allow|deny)(users|groups)\h+\H+'
+    register: audit_5_1_4_0
+    changed_when: false
+    failed_when: audit_5_1_4_0.stdout | length == 0
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.4 Ensure sshd access is configured (Audit - Match set statements are
+      used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep -Pi -'^\h*(allow|deny)(users|groups)\h+\H+'
+    register: audit_5_1_4_1
+    changed_when: false
+    failed_when: audit_5_1_4_1.stdout | length == 0
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.4 Ensure sshd access is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "# Manual remediation required to choose AllowUsers or
+      AllowGroups\n# This is a placeholder that does not automatically modify since
+      user lists are site-specific.\necho 'Manual remediation required'\n"
+    when: audit_5_1_4_0.rc != 0 and audit_5_1_4_1.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.5 Ensure sshd Banner is configured
+    # ------------------------------------------------------------
+  - name: "5.1.5 Ensure sshd Banner is configured (Audit - Default fallback (not Match
+      set statements are used in SSH))"
+    ansible.builtin.shell: |-
+      sshd -T | grep -Pi -- '^banner\h+\/\H+'
+    register: audit_5_1_5_0
+    changed_when: false
+    failed_when: audit_5_1_5_0.stdout | length == 0
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.5 Ensure sshd Banner is configured (Audit - Match set statements are
+      used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep -Pi -- '^banner\h+\/\H+'
+      [ -e "$(sshd -T | awk '$1 == "banner" {print $2}')" ] && cat "$(sshd -T |
+      grep -Psi -- "(\\\v|\\\r|\\\m|\\\s|\b$(grep '^ID=' /etc/os-release | cut d= -f2 | sed -e 's/"//g')\b)" "$(sshd -T | awk '$1 == "banner" {print $2}')"
+    register: audit_5_1_5_1
+    changed_when: false
+    failed_when: audit_5_1_5_1.stdout | length == 0
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.5 Ensure sshd Banner is configured (Remediation)"
+    ansible.builtin.shell: |
+      printf '%s\n' "Authorized users only. All activity may be monitored and reported." > "$(sshd -T | awk '$1 == "banner" {print $2}')"
+    register: rem_5_1_5_0
+    changed_when: rem_5_1_5_0.rc == 0
+    ignore_errors: true
+    when: audit_5_1_5_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.1.6 Ensure sshd Ciphers are configured
+    # ------------------------------------------------------------
+  - name: "5.1.6 Ensure sshd Ciphers are configured (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep -Pi -'^ciphers\h+\"?([^#\n\r]+,)?((3des|blowfish|cast128|aes(128|192|256))cbc|arcfour(128|256)?|rijndael-cbc@lysator\.liu\.se)\b'
+      sshd -T 2>&1 | awk '($1=="ciphers" && $2~/chacha20poly1305@openssh\.com/){print}'
+    register: audit_5_1_6_0
+    changed_when: false
+    failed_when: audit_5_1_6_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.6 Ensure sshd Ciphers are configured (Remediation - CVE-2023-48795
+      has been addressed, and it meets local site policy,)"
+    ansible.builtin.shell: |
+      printf '%s\n' "# This is a subpolicy to disable weak ciphers" > /etc/ssh/sshd_config.d/weak-ciphers.conf
+      update-crypto-policies --set DEFAULT:NO-SHA1:NO-WEAKMAC:NO-SSHCBC:NO-SSHCHACHA20:NO-SSHWEAKCIPHERS
+      systemctl reload-or-restart sshd
+    register: rem_5_1_6_0
+    changed_when: rem_5_1_6_0.rc == 0
+    ignore_errors: true
+      when:
+        - audit_5_1_6_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.1.8 Ensure sshd DisableForwarding is enabled
+    # ------------------------------------------------------------
+  - name: "5.1.8 Ensure sshd DisableForwarding is enabled (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep disableforwarding
+    register: audit_5_1_8_0
+    changed_when: false
+    failed_when: "'disableforwarding yes' not in audit_5_1_8_0.stdout | lower"
+    ignore_errors: true
+    tags: ["level_1__workstation", "level_2__server", "cis", "automated"]
+
+  - name: "5.1.8 Ensure sshd DisableForwarding is enabled (Remediation)"
+    tags: ["level_1__workstation", "level_2__server", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*DisableForwarding.*/DisableForwarding
+      yes/g' /etc/ssh/sshd_config\nif ! grep -qi '^DisableForwarding yes' /etc/ssh/sshd_config;
+      then echo 'DisableForwarding yes' >> /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_8_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.9 Ensure sshd GSSAPIAuthentication is disabled
+    # ------------------------------------------------------------
+  - name: "5.1.9 Ensure sshd GSSAPIAuthentication is disabled (Audit - Default fallback
+      (not Match set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep gssapiauthentication
+    register: audit_5_1_9_0
+    changed_when: false
+    failed_when: "'gssapiauthentication no' not in audit_5_1_9_0.stdout | lower"
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__workstation", "level_2__server", "cis", "automated"]
+
+  - name: "5.1.9 Ensure sshd GSSAPIAuthentication is disabled (Audit - Match set statements
+      are used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep gssapiauthentication
+    register: audit_5_1_9_1
+    changed_when: false
+    failed_when: "'gssapiauthentication no' not in audit_5_1_9_1.stdout | lower"
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__workstation", "level_2__server", "cis", "automated"]
+
+  - name: "5.1.9 Ensure sshd GSSAPIAuthentication is disabled (Remediation)"
+    tags: ["level_1__workstation", "level_2__server", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*GSSAPIAuthentication.*/GSSAPIAuthentication
+      no/g' /etc/ssh/sshd_config\nif ! grep -qi '^GSSAPIAuthentication no' /etc/ssh/sshd_config;
+      then echo 'GSSAPIAuthentication no' >> /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_9_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.11 Ensure sshd IgnoreRhosts is enabled
+    # ------------------------------------------------------------
+  - name: "5.1.11 Ensure sshd IgnoreRhosts is enabled (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep ignorerhosts
+    register: audit_5_1_11_0
+    changed_when: false
+    failed_when: "'ignorerhosts yes' not in audit_5_1_11_0.stdout | lower"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.11 Ensure sshd IgnoreRhosts is enabled (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*IgnoreRhosts.*/IgnoreRhosts yes/g'
+      /etc/ssh/sshd_config\nif ! grep -qi '^IgnoreRhosts yes' /etc/ssh/sshd_config;
+      then echo 'IgnoreRhosts yes' >> /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_11_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.12 Ensure sshd KexAlgorithms is configured
+    # ------------------------------------------------------------
+  - name: "5.1.12 Ensure sshd KexAlgorithms is configured (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep -Pi -- 'kexalgorithms\h+([^#\n\r]+,)?(diffie-hellman-group1sha1|diffie-hellman-group14-sha1|diffie-hellman-group-exchange-sha1)\b'
+    register: audit_5_1_12_0
+    changed_when: false
+    failed_when: audit_5_1_12_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.12 Ensure sshd KexAlgorithms is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "if grep -qi '^KexAlgorithms' /etc/ssh/sshd_config; then
+      sed -i 's/^KexAlgorithms.*/KexAlgorithms -diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1/'
+      /etc/ssh/sshd_config; else echo 'KexAlgorithms -diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1'
+      >> /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_12_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.14 Ensure sshd LoginGraceTime is configured
+    # ------------------------------------------------------------
+  - name: "5.1.14 Ensure sshd LoginGraceTime is configured (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep logingracetime
+    register: audit_5_1_14_0
+    changed_when: false
+    failed_when: audit_5_1_14_0.stdout | length == 0 or (audit_5_1_14_0.stdout.split()
+      | last | int == 0) or (audit_5_1_14_0.stdout.split() | last | int > 60)
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.14 Ensure sshd LoginGraceTime is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*LoginGraceTime.*/LoginGraceTime 60/g'
+      /etc/ssh/sshd_config\nif ! grep -qi '^LoginGraceTime ' /etc/ssh/sshd_config;
+      then echo 'LoginGraceTime 60' >> /etc/ssh/sshd_config; else sed -i 's/^LoginGraceTime.*/LoginGraceTime
+      60/' /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_14_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.15 Ensure sshd LogLevel is configured
+    # ------------------------------------------------------------
+  - name: "5.1.15 Ensure sshd LogLevel is configured (Audit - Default fallback (not
+      Match set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep loglevel
+    register: audit_5_1_15_0
+    changed_when: false
+    failed_when: "'LOGLEVEL VERBOSE' not in audit_5_1_15_0.stdout | upper and 'LOGLEVEL INFO' not in audit_5_1_15_0.stdout | upper"
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.15 Ensure sshd LogLevel is configured (Audit - Match set statements
+      are used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep loglevel
+    register: audit_5_1_15_1
+    changed_when: false
+    failed_when: "'LOGLEVEL VERBOSE' not in audit_5_1_15_1.stdout | upper and 'LOGLEVEL INFO' not in audit_5_1_15_1.stdout | upper"
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.15 Ensure sshd LogLevel is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*LogLevel.*/LogLevel INFO/g' /etc/ssh/sshd_config\n
+      if ! grep -qi '^LogLevel ' /etc/ssh/sshd_config; then echo 'LogLevel INFO' >>
+      /etc/ssh/sshd_config; else sed -i 's/^LogLevel.*/LogLevel INFO/' /etc/ssh/sshd_config;
+      fi\n"
+    when: audit_5_1_15_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.16 Ensure sshd MACs are configured
+    # ------------------------------------------------------------
+  - name: "5.1.16 Ensure sshd MACs are configured (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep -Pi -- 'macs\h+([^#\n\r]+,)?(hmac-md5|hmac-md5-96|hmacripemd160|hmac-sha1-96|umac-64@openssh\.com|hmac-md5-etm@openssh\.com|hmacmd5-96-etm@openssh\.com|hmac-ripemd160-etm@openssh\.com|hmac-sha1-96etm@openssh\.com|umac-64-etm@openssh\.com|umac-128-etm@openssh\.com)\b'
+    register: audit_5_1_16_0
+    changed_when: false
+    failed_when: audit_5_1_16_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.16 Ensure sshd MACs are configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "if grep -qi '^MACs' /etc/ssh/sshd_config; then sed -i
+      's/^MACs.*/MACs -hmac-md5,hmac-md5-96,hmac-ripemd160,hmac-sha1-96,umac-64@openssh.com,hmac-md5-etm@openssh.com,hmac-md5-96-etm@openssh.com,hmac-ripemd160-etm@openssh.com,hmac-sha1-96-etm@openssh.com,umac-64-etm@openssh.com,umac-128-etm@openssh.com/'
+      /etc/ssh/sshd_config; else echo 'MACs -hmac-md5,hmac-md5-96,hmac-ripemd160,hmac-sha1-96,umac-64@openssh.com,hmac-md5-etm@openssh.com,hmac-md5-96-etm@openssh.com,hmac-ripemd160-etm@openssh.com,hmac-sha1-96-etm@openssh.com,umac-64-etm@openssh.com,umac-128-etm@openssh.com'
+      >> /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_16_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.17 Ensure sshd MaxAuthTries is configured
+    # ------------------------------------------------------------
+  - name: "5.1.17 Ensure sshd MaxAuthTries is configured (Audit - Default fallback
+      (not Match set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep maxauthtries
+    register: audit_5_1_17_0
+    changed_when: false
+    failed_when: audit_5_1_17_0.stdout | length == 0 or (audit_5_1_17_0.stdout.split()
+      | last | int > 4)
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.17 Ensure sshd MaxAuthTries is configured (Audit - Match set statements
+      are used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep maxauthtries
+    register: audit_5_1_17_1
+    changed_when: false
+    failed_when: audit_5_1_17_1.stdout | length == 0 or (audit_5_1_17_1.stdout.split()
+      | last | int > 4)
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.17 Ensure sshd MaxAuthTries is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*MaxAuthTries.*/MaxAuthTries 4/g' /etc/ssh/sshd_config\n
+      if ! grep -qi '^MaxAuthTries ' /etc/ssh/sshd_config; then echo 'MaxAuthTries
+      4' >> /etc/ssh/sshd_config; else sed -i 's/^MaxAuthTries.*/MaxAuthTries 4/'
+      /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_17_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.18 Ensure sshd MaxSessions is configured
+    # ------------------------------------------------------------
+  - name: "5.1.18 Ensure sshd MaxSessions is configured (Audit - Default fallback
+      (not Match set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep maxsessions; grep -Pi '^\s*MaxSessions\s+' /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null || true
+    register: audit_5_1_18_0
+    changed_when: false
+    failed_when: audit_5_1_18_0.stdout | length == 0 or (audit_5_1_18_0.stdout.split()
+      | last | int > 10)
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.18 Ensure sshd MaxSessions is configured (Audit - Match set statements
+      are used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep maxsessions
+    register: audit_5_1_18_1
+    changed_when: false
+    failed_when: audit_5_1_18_1.stdout | length == 0 or (audit_5_1_18_1.stdout.split()
+      | last | int > 10)
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.18 Ensure sshd MaxSessions is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*MaxSessions.*/MaxSessions 10/g' /etc/ssh/sshd_config\n
+      if ! grep -qi '^MaxSessions ' /etc/ssh/sshd_config; then echo 'MaxSessions 10'
+      >> /etc/ssh/sshd_config; else sed -i 's/^MaxSessions.*/MaxSessions 10/' /etc/ssh/sshd_config;
+      fi\n"
+    when: audit_5_1_18_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.19 Ensure sshd MaxStartups is configured
+    # ------------------------------------------------------------
+  - name: "5.1.19 Ensure sshd MaxStartups is configured (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | awk '$1 ~ /^\s*maxstartups/{split($2, a, ":"); if(a[1] > 10 || a[2] > 30 || a[3] > 60) print $0}'
+    register: audit_5_1_19_0
+    changed_when: false
+    failed_when: audit_5_1_19_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.19 Ensure sshd MaxStartups is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*MaxStartups.*/MaxStartups 10:30:60/g'
+      /etc/ssh/sshd_config\nif ! grep -qi '^MaxStartups ' /etc/ssh/sshd_config; then
+      echo 'MaxStartups 10:30:60' >> /etc/ssh/sshd_config; else sed -i 's/^MaxStartups.*/MaxStartups
+      10:30:60/' /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_19_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.21 Ensure sshd PermitRootLogin is disabled
+    # ------------------------------------------------------------
+  - name: "5.1.21 Ensure sshd PermitRootLogin is disabled (Audit - Default fallback
+      (not Match set statements are used in SSH))"
+    ansible.builtin.shell: |
+      sshd -T | grep permitrootlogin
+    register: audit_5_1_21_0
+    changed_when: false
+    failed_when: "'permitrootlogin no' not in audit_5_1_21_0.stdout | lower"
+    ignore_errors: true
+    when: not (cis_ssh_match_set_used | default(false) == true)
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.21 Ensure sshd PermitRootLogin is disabled (Audit - Match set statements
+      are used in SSH)"
+    ansible.builtin.shell: |
+      sshd -T -C user=sshuser | grep permitrootlogin
+    register: audit_5_1_21_1
+    changed_when: false
+    failed_when: "'permitrootlogin no' not in audit_5_1_21_1.stdout | lower"
+    ignore_errors: true
+    when: cis_ssh_match_set_used | default(false) == true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.21 Ensure sshd PermitRootLogin is disabled (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*PermitRootLogin.*/PermitRootLogin
+      no/g' /etc/ssh/sshd_config\nif ! grep -qi '^PermitRootLogin ' /etc/ssh/sshd_config;
+      then echo 'PermitRootLogin no' >> /etc/ssh/sshd_config; else sed -i 's/^PermitRootLogin.*/PermitRootLogin
+      no/' /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_21_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.1.23 Ensure sshd UsePAM is enabled
+    # ------------------------------------------------------------
+  - name: "5.1.23 Ensure sshd UsePAM is enabled (Audit)"
+    ansible.builtin.shell: |
+      sshd -T | grep usepam
+    register: audit_5_1_23_0
+    changed_when: false
+    failed_when: "'usepam yes' not in audit_5_1_23_0.stdout | lower"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.1.23 Ensure sshd UsePAM is enabled (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i 's/^\\s*#\\s*UsePAM.*/UsePAM yes/g' /etc/ssh/sshd_config\n
+      if ! grep -qi '^UsePAM ' /etc/ssh/sshd_config; then echo 'UsePAM yes' >> /etc/ssh/sshd_config;
+      else sed -i 's/^UsePAM.*/UsePAM yes/' /etc/ssh/sshd_config; fi\n"
+    when: audit_5_1_23_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.2 Configure privilege escalation
+    # ------------------------------------------------------------
+  - name: "5.2 Configure privilege escalation (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.2 Configure privilege escalation (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.2.1 Ensure sudo is installed
+    # ------------------------------------------------------------
+  - name: "5.2.1 Ensure sudo is installed (Audit)"
+    ansible.builtin.shell: |
+      dpkg-query -l | awk '{print $2}' | grep -Pio -- '^sudo|^sudo-ldap'
+      dpkg-query -s libsss-sudo &>/dev/null && echo "libsss-sudo is installed"
+      dpkg-query -s sssd &>/dev/null && echo "sssd is installed"
+    register: audit_5_2_1_0
+    changed_when: false
+    failed_when: "'sudo' not in audit_5_2_1_0.stdout and 'libsss-sudo' not in audit_5_2_1_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.2.1 Ensure sudo is installed (Remediation)"
+    ansible.builtin.shell: |
+      apt install libsss-sudo sssd
+    register: rem_5_2_1_0
+    changed_when: rem_5_2_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_2_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.2.2 Ensure sudo commands use pty
+    # ------------------------------------------------------------
+  - name: "5.2.2 Ensure sudo commands use pty (Audit)"
+    ansible.builtin.shell: |
+      grep -rPi -- '^\h*Defaults\h+([^#\n\r]+,\h*)?use_pty\b' /etc/sudoers*
+      grep -rPi -- '^\h*Defaults\h+([^#\n\r]+,\h*)?!use_pty\b' /etc/sudoers*
+    register: audit_5_2_2_0
+    changed_when: false
+    failed_when: "'use_pty' not in audit_5_2_2_0.stdout or '!use_pty' in audit_5_2_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.2.2 Ensure sudo commands use pty (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "echo \"Defaults use_pty\" > /etc/sudoers.d/use_pty\nsed
+      -i 's/!use_pty//g' /etc/sudoers\nfor f in /etc/sudoers.d/*; do if [ -f \"$f\"\
+      \ ]; then sed -i 's/!use_pty//g' \"$f\"; fi; done\n"
+    when: audit_5_2_2_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.2.3 Ensure sudo log file exists
+    # ------------------------------------------------------------
+  - name: "5.2.3 Ensure sudo log file exists (Audit)"
+    ansible.builtin.shell: |
+      grep -rPsi "^\h*Defaults\h+([^#]+,\h*)?logfile\h*=\h*(\"|\')?\H+(\"|\')?(,\h*\H+\h*)*\h*(#.*)?$" /etc/sudoers*
+    register: audit_5_2_3_0
+    changed_when: false
+    failed_when: audit_5_2_3_0.stdout | length == 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.2.3 Ensure sudo log file exists (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "echo 'Defaults logfile=\"/var/log/sudo.log\"' > /etc/sudoers.d/logfile\n"
+    when: audit_5_2_3_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.2.6 Ensure sudo timestamp_timeout is configured
+    # ------------------------------------------------------------
+  - name: "5.2.6 Ensure sudo timestamp_timeout is configured (Audit)"
+    ansible.builtin.shell: |
+      timeout=$(sudo -V | grep -Po 'timestamp timeout\s+\K\d+'); if [ -n "$timeout" ] && [ "$timeout" -le 15 ]; then echo "Timeout ok"; else echo "Timeout bad"; fi
+    register: audit_5_2_6_0
+    changed_when: false
+    failed_when: "'Timeout ok' not in audit_5_2_6_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.2.6 Ensure sudo timestamp_timeout is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "echo \"Defaults timestamp_timeout=15\" > /etc/sudoers.d/timeout\n"
+    when: audit_5_2_6_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.2.7 Ensure access to the su command is restricted
+    # ------------------------------------------------------------
+  - name: "5.2.7 Ensure access to the su command is restricted (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi '^\s*auth\s+(?:required|requisite)\s+pam_wheel\.so\s+(?:[^#\n\r]+\s+)?use_uid\b' /etc/pam.d/su
+      grep -Pi '^sugroup:' /etc/group
+    register: audit_5_2_7_0
+    changed_when: false
+    failed_when: audit_5_2_7_0.stdout | length == 0 or 'pam_wheel.so' not in audit_5_2_7_0.stdout
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.2.7 Ensure access to the su command is restricted (Remediation)"
+    ansible.builtin.shell: |
+      groupadd sugroup
+    register: rem_5_2_7_0
+    changed_when: rem_5_2_7_0.rc == 0
+    ignore_errors: true
+    when: audit_5_2_7_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3 Pluggable Authentication Modules
+    # ------------------------------------------------------------
+  - name: "5.3 Pluggable Authentication Modules (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.3 Pluggable Authentication Modules (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.1 Configure PAM software packages
+    # ------------------------------------------------------------
+  - name: "5.3.1 Configure PAM software packages (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.3.1 Configure PAM software packages (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.1.1 Ensure latest version of pam is installed
+    # ------------------------------------------------------------
+  - name: "5.3.1.1 Ensure latest version of pam is installed (Audit)"
+    ansible.builtin.shell: |
+      dpkg-query -s libpam-runtime &>/dev/null && echo "libpam-runtime is installed"
+      apt list --upgradable 2>&1 | grep -P '^libpam-runtime\b' || true
+    register: audit_5_3_1_1_0
+    changed_when: false
+    failed_when: "'libpam-runtime is installed' not in audit_5_3_1_1_0.stdout or audit_5_3_1_1_0.stdout_lines
+      | length > 1"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.1.1 Ensure latest version of pam is installed (Remediation)"
+    ansible.builtin.shell: |
+      apt install libpam-runtime
+    register: rem_5_3_1_1_0
+    changed_when: rem_5_3_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.2 Configure pam-auth-update profiles
+    # ------------------------------------------------------------
+  - name: "5.3.2 Configure pam-auth-update profiles (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.3.2 Configure pam-auth-update profiles (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.2.1 Ensure pam_unix module is enabled
+    # ------------------------------------------------------------
+  - name: "5.3.2.1 Ensure pam_unix module is enabled (Audit)"
+    ansible.builtin.shell: |
+      grep -PH -- '\bpam_unix\.so\b' /etc/pam.d/common{account,auth,password,session,session-noninteractive}
+    register: audit_5_3_2_1_0
+    changed_when: false
+    failed_when: "'pam_unix.so' not in audit_5_3_2_1_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.1 Ensure pam_unix module is enabled (Remediation)"
+    ansible.builtin.shell: |
+      pam-auth-update --enable unix
+    register: rem_5_3_2_1_0
+    changed_when: rem_5_3_2_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_2_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.2.2 Ensure pam_faillock module is enabled
+    # ------------------------------------------------------------
+  - name: "5.3.2.2 Ensure pam_faillock module is enabled (Audit)"
+    ansible.builtin.shell: |
+      grep -P -- '\bpam_faillock\.so\b' /etc/pam.d/common-{auth,account}
+    register: audit_5_3_2_2_0
+    changed_when: false
+    failed_when: "'pam_faillock.so' not in audit_5_3_2_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.2 Ensure pam_faillock module is enabled (Remediation)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+      arr=('Name: Enable pam_faillock to deny access' 'Default: yes' 'Priority:
+      0' 'Auth-Type: Primary' 'Auth:' '
+      [default=die]
+      pam_faillock.so authfail')
+      printf '%s\n' "${arr[@]}" > /usr/share/pam-configs/faillock
+      }
+      #!/usr/bin/env bash
+      {
+      arr=('Name: Notify of failed login attempts and reset count upon success'
+      'Default: yes' 'Priority: 1024' 'Auth-Type: Primary' 'Auth:' '
+      requisite
+      pam_faillock.so preauth' 'Account-Type:
+      Primary' 'Account:' '
+      required
+      pam_faillock.so')
+      printf '%s\n' "${arr[@]}" > /usr/share/pam-configs/faillock_notify
+      }
+      pam-auth-update --enable faillock
+      pam-auth-update --enable faillock_notify
+    register: rem_5_3_2_2_0
+    changed_when: rem_5_3_2_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_2_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.2.3 Ensure pam_pwquality module is enabled
+    # ------------------------------------------------------------
+  - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Audit)"
+    ansible.builtin.shell: |
+      grep -P -- '\bpam_pwquality\.so\b' /etc/pam.d/common-password
+    register: audit_5_3_2_3_0
+    changed_when: false
+    failed_when: "'pam_pwquality.so' not in audit_5_3_2_3_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Remediation - Default)"
+    ansible.builtin.shell: |
+      grep -P -- '\bpam_pwquality\.so\b' /usr/share/pam-configs/*
+    register: rem_5_3_2_3_0
+    changed_when: rem_5_3_2_3_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_2_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Remediation - similar output
+      is returned)"
+    ansible.builtin.shell: |
+      profile=$(grep -Pl 'pam_pwquality\.so' /usr/share/pam-configs/* 2>/dev/null | xargs -n1 basename | head -n1)
+      if [ -n "$profile" ]; then pam-auth-update --enable "$profile"; fi
+      pam-auth-update --enable pwquality
+    register: rem_5_3_2_3_1
+    changed_when: rem_5_3_2_3_1.rc == 0
+    ignore_errors: true
+    when:
+    - audit_5_3_2_3_1.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Remediation - similar output
+      is NOT returned)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        arr=('Name: Pwquality password strength checking' 'Default: yes'
+          'Priority: 1024' 'Conflicts: cracklib' 'Password-Type: Primary' 'Password:' '
+      requisite
+      pam_pwquality.so retry=3')
+        printf '%s\n' "${arr[@]}" >/usr/share/pam-configs/pwquality
+      }
+      pam-auth-update --enable pwquality
+    register: rem_5_3_2_3_2
+    changed_when: rem_5_3_2_3_2.rc == 0
+    ignore_errors: true
+    when:
+    - audit_5_3_2_3_2.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.2.4 Ensure pam_pwhistory module is enabled
+    # ------------------------------------------------------------
+  - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Audit)"
+    ansible.builtin.shell: |
+      grep -P -- '\bpam_pwhistory\.so\b' /etc/pam.d/common-password
+    register: audit_5_3_2_4_0
+    changed_when: false
+    failed_when: "'pam_pwhistory.so' not in audit_5_3_2_4_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Remediation - Default)"
+    ansible.builtin.shell: |
+      grep -P -- '\bpam_pwhistory\.so\b' /usr/share/pam-configs/*
+    register: rem_5_3_2_4_0
+    changed_when: rem_5_3_2_4_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_2_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Remediation - similar output
+      is returned)"
+    ansible.builtin.shell: |
+      profile=$(grep -Pl 'pam_pwhistory\.so' /usr/share/pam-configs/* 2>/dev/null | xargs -n1 basename | head -n1)
+      if [ -n "$profile" ]; then pam-auth-update --enable "$profile"; fi
+      pam-auth-update --enable pwhistory
+    register: rem_5_3_2_4_1
+    changed_when: rem_5_3_2_4_1.rc == 0
+    ignore_errors: true
+    when:
+    - audit_5_3_2_4_1.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Remediation - similar output
+      is NOT returned)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        arr=('Name: pwhistory password history checking' 'Default: yes' 'Priority:
+      1024' 'Password-Type: Primary' 'Password:' '
+      requisite
+      pam_pwhistory.so remember=24 enforce_for_root use_authtok')
+        printf '%s\n' "${arr[@]}" >/usr/share/pam-configs/pwhistory
+      }
+      pam-auth-update --enable pwhistory
+    register: rem_5_3_2_4_2
+    changed_when: rem_5_3_2_4_2.rc == 0
+    ignore_errors: true
+    when:
+    - audit_5_3_2_4_2.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3 Configure PAM Arguments
+    # ------------------------------------------------------------
+  - name: "5.3.3 Configure PAM Arguments (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.3.3 Configure PAM Arguments (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.1 Configure pam_faillock module
+    # ------------------------------------------------------------
+  - name: "5.3.3.1 Configure pam_faillock module (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi -- '^\h*deny\h*=\h*[1-5]\b' /etc/security/faillock.conf
+      grep -Pi -- '^\s*auth\s+(requisite|required|sufficient)\s+pam_faillock\.so\s+([^#\n\r]+\s+)?deny\b' /etc/pam.d/common-auth
+    register: audit_5_3_3_1_0
+    changed_when: false
+    failed_when: "'deny' not in audit_5_3_3_1_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "5.3.3.1 Configure pam_faillock module (Remediation)"
+    ansible.builtin.shell: |
+      grep -Pl -- '\bpam_faillock\.so\h+([^#\n\r]+\h+)?deny\b' /usr/share/pamconfigs/*
+    register: rem_5_3_3_1_0
+    changed_when: rem_5_3_3_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.1.1 Ensure password failed attempts lockout is configured
+    # ------------------------------------------------------------
+  - name: "5.3.3.1.1 Ensure password failed attempts lockout is configured (Audit)"
+    ansible.builtin.shell: |-
+      grep -Pi -- '^\h*deny\h*=\h*[1-5]\b' /etc/security/faillock.conf
+    register: audit_5_3_3_1_1_0
+    changed_when: false
+    failed_when: audit_5_3_3_1_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.1.1 Ensure password failed attempts lockout is configured (Remediation)"
+    ansible.builtin.lineinfile:
+      path: /etc/security/faillock.conf
+      regexp: '^\s*deny\s*='
+      line: 'deny = 5'
+      create: true
+    register: rem_5_3_3_1_1_0
+    ignore_errors: true
+    when: audit_5_3_3_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.1.2 Ensure password unlock time is configured
+    # ------------------------------------------------------------
+  - name: "5.3.3.1.2 Ensure password unlock time is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi -- '^\h*unlock_time\h*=\h*(0|9[0-9][0-9]|[1-9][0-9]{3,})\b' /etc/security/faillock.conf
+      grep -Pi -- '^\s*auth\s+(requisite|required|sufficient)\s+pam_faillock\.so\s+([^#\n\r]+\s+)?deny\b' /etc/pam.d/common-auth
+    register: audit_5_3_3_1_2_0
+    changed_when: false
+    failed_when: "'unlock_time' not in audit_5_3_3_1_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.1.2 Ensure password unlock time is configured (Remediation)"
+    ansible.builtin.shell: |
+      grep -Pl -- '\bpam_faillock\.so\h+([^#\n\r]+\h+)?unlock_time\b'
+    register: rem_5_3_3_1_2_0
+    changed_when: rem_5_3_3_1_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_1_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.2 Configure pam_pwquality module
+    # ------------------------------------------------------------
+  - name: "5.3.3.2 Configure pam_pwquality module (Audit)"
+    ansible.builtin.shell: |
+      grep -Psi -- '^\h*difok\h*=\h*([2-9]|[1-9][0-9]+)\b' /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>/dev/null || true
+      grep -Psi -- '^\h*password\h+(requisite|required|sufficient)\h+pam_pwquality\.so\h+([^#\n\r]+\h+)?difok\b' /etc/pam.d/common-password
+    register: audit_5_3_3_2_0
+    changed_when: false
+    failed_when: "'difok' not in audit_5_3_3_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "5.3.3.2 Configure pam_pwquality module (Remediation)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        sed -ri 's/^\s*difok\s*=/# &/' /etc/security/pwquality.conf
+        [ ! -d /etc/security/pwquality.conf.d/ ] && mkdir
+        /etc/security/pwquality.conf.d/
+        printf '\n%s' "difok = 2" >/etc/security/pwquality.conf.d/50-pwdifok.conf
+      }
+      grep -Pl -- '\bpam_pwquality\.so\h+([^#\n\r]+\h+)?difok\b' /usr/share/pamconfigs/*
+    register: rem_5_3_3_2_0
+    changed_when: rem_5_3_3_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.2.2 Ensure password length is configured
+    # ------------------------------------------------------------
+  - name: "5.3.3.2.2 Ensure password length is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Psi -- '^\h*minlen\h*=\h*(1[4-9]|[2-9][0-9]|[1-9][0-9]{2,})\b' /etc/security/pwquality.conf /etc/security/pwquality.conf.d/*.conf 2>/dev/null || true
+      grep -Psi -- '^\h*password\h+(requisite|required|sufficient)\h+pam_pwquality\.so\h+([^#\n\r]+\h+)?difok\b' /etc/pam.d/common-password
+    register: audit_5_3_3_2_2_0
+    changed_when: false
+    failed_when: "'minlen' not in audit_5_3_3_2_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.2.2 Ensure password length is configured (Remediation)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        sed -ri 's/^\s*minlen\s*=/# &/' /etc/security/pwquality.conf
+        [ ! -d /etc/security/pwquality.conf.d/ ] && mkdir
+        /etc/security/pwquality.conf.d/
+        printf '\n%s' "minlen = 14" >/etc/security/pwquality.conf.d/50pwlength.conf
+      }
+      grep -Pl -- '\bpam_pwquality\.so\h+([^#\n\r]+\h+)?minlen\b' /usr/share/pamconfigs/*
+    register: rem_5_3_3_2_2_0
+    changed_when: rem_5_3_3_2_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_2_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.2.3 Ensure password complexity is configured
+    # ------------------------------------------------------------
+  - name: "5.3.3.2.3 Ensure password complexity is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Psi -- '^\h*(minclass|[dulo]credit)\b' /etc/security/pwquality.conf
+      grep -Psi -- '^\h*password\h+(requisite|required|sufficient)\h+pam_pwquality\.so\h+([^#\n\r]+\h+)?difok\b' /etc/pam.d/common-password
+    register: audit_5_3_3_2_3_0
+    changed_when: false
+    failed_when: "'minclass' not in audit_5_3_3_2_3_0.stdout and 'credit' not in audit_5_3_3_2_3_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "5.3.3.2.3 Ensure password complexity is configured (Remediation)"
+    ansible.builtin.shell: |
+      grep -Pl -'\bpam_pwquality\.so\h+([^#\n\r]+\h+)?(minclass|[dulo]credit)\b'
+      #!/usr/bin/env bash
+      {
+      sed -ri 's/^\s*minclass\s*=/# &/' /etc/security/pwquality.conf
+      sed -ri 's/^\s*[dulo]credit\s*=/# &/' /etc/security/pwquality.conf
+      [ ! -d /etc/security/pwquality.conf.d/ ] && mkdir
+      /etc/security/pwquality.conf.d/
+      printf '\n%s' "minclass = 3" > /etc/security/pwquality.conf.d/50pwcomplexity.conf
+      }
+      #!/usr/bin/env bash
+      {
+      sed -ri 's/^\s*minclass\s*=/# &/' /etc/security/pwquality.conf
+      sed -ri 's/^\s*[dulo]credit\s*=/# &/' /etc/security/pwquality.conf
+      [ ! -d /etc/security/pwquality.conf.d/ ] && mkdir
+      /etc/security/pwquality.conf.d/
+      printf '%s\n' "dcredit = -1" "ucredit = -1" "lcredit = -1" >
+      /etc/security/pwquality.conf.d/50-pwcomplexity.conf
+      }
+    register: rem_5_3_3_2_3_0
+    changed_when: rem_5_3_3_2_3_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_2_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.3 Configure pam_pwhistory module
+    # ------------------------------------------------------------
+  - name: "5.3.3.3 Configure pam_pwhistory module (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi -- '^\h*remember\h*=\h*(2[4-9]|[3-9][0-9]|[1-9][0-9]{2,})\b' /etc/security/pwhistory.conf 2>/dev/null || true
+      grep -P -- '\bpam_pwhistory\.so\b' /etc/pam.d/common-password
+    register: audit_5_3_3_3_0
+    changed_when: false
+    failed_when: "'remember' not in audit_5_3_3_3_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "5.3.3.3 Configure pam_pwhistory module (Remediation - The pam_pwhistory
+      profile in /usr/share/pam-configs/ has been used to)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        profiles=$(grep -Rl "pam_pwhistory.so" /usr/share/pam-configs/ || true)
+        for profile in $profiles; do
+          if grep -Pq 'remember\s*=\s*\d+' "$profile"; then
+            sed -Ei 's/remember\s*=\s*[0-9]+//g' "$profile"
+            sed -Ei 's/[[:space:]]+/ /g' "$profile"
+            echo "Updated pam profile: $profile"
+            pam-auth-update --package </dev/null
+          fi
+        done
+      }
+    register: rem_5_3_3_3_0
+    changed_when: rem_5_3_3_3_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_5_3_3_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.3.1 Ensure password history remember is configured
+    # ------------------------------------------------------------
+  - name: "5.3.3.3.1 Ensure password history remember is configured (Audit)"
+    ansible.builtin.shell: |-
+      grep -Pi -- '^\h*remember\h*=\h*(2[4-9]|[3-9][0-9]|[1-9][0-9]{2,})\b' /etc/security/pwhistory.conf
+    register: audit_5_3_3_3_1_0
+    changed_when: false
+    failed_when: audit_5_3_3_3_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.3.1 Ensure password history remember is configured (Remediation)"
+    ansible.builtin.lineinfile:
+      path: /etc/security/pwhistory.conf
+      regexp: '^\s*remember\s*='
+      line: 'remember = 24'
+      create: true
+    register: rem_5_3_3_3_1_0
+    ignore_errors: true
+    when: audit_5_3_3_3_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.4 Configure pam_unix module
+    # ------------------------------------------------------------
+  - name: "5.3.3.4 Configure pam_unix module (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.3.3.4 Configure pam_unix module (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.4.1 Ensure pam_unix does not include nullok
+    # ------------------------------------------------------------
+  - name: "5.3.3.4.1 Ensure pam_unix does not include nullok (Audit)"
+    ansible.builtin.shell: |
+      grep -PHs -- '^\h*[^#\n\r]+\h+pam_unix\.so\h+([^#\n\r]+\h+)?nullok\b' /etc/pam.d/common-password /etc/pam.d/common-auth /etc/pam.d/common-account /etc/pam.d/common-session /etc/pam.d/common-session-noninteractive 2>/dev/null || true
+    register: audit_5_3_3_4_1_0
+    changed_when: false
+    failed_when: audit_5_3_3_4_1_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.4.1 Ensure pam_unix does not include nullok (Remediation)"
+    ansible.builtin.shell: |
+      sed -i 's/nullok//g' /usr/share/pam-configs/*
+      pam-auth-update --enable unix
+    register: rem_5_3_3_4_1_0
+    changed_when: rem_5_3_3_4_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_4_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.3.3.4.4 Ensure pam_unix includes use_authtok
+    # ------------------------------------------------------------
+  - name: "5.3.3.4.4 Ensure pam_unix includes use_authtok (Audit)"
+    ansible.builtin.shell: |
+      grep -PH -- '^\h*password\h+([^#\n\r]+)\h+pam_unix\.so\h+([^#\n\r]+\h+)?use_authtok\b' /etc/pam.d/common-password 2>/dev/null || true
+    register: audit_5_3_3_4_4_0
+    changed_when: false
+    failed_when: "'use_authtok' not in audit_5_3_3_4_4_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.3.3.4.4 Ensure pam_unix includes use_authtok (Remediation)"
+    ansible.builtin.shell: |
+      sed -i 's/use_authtok//g' /usr/share/pam-configs/* 2>/dev/null || true
+      for file in /usr/share/pam-configs/*; do if [ -f "$file" ] && grep -q 'pam_unix.so' "$file"; then sed -i 's/pam_unix.so/pam_unix.so use_authtok/' "$file"; fi; done
+      pam-auth-update --enable unix
+    register: rem_5_3_3_4_4_0
+    changed_when: rem_5_3_3_4_4_0.rc == 0
+    ignore_errors: true
+    when: audit_5_3_3_4_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4 User Accounts and Environment
+    # ------------------------------------------------------------
+  - name: "5.4 User Accounts and Environment (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.4 User Accounts and Environment (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.4.1 Configure shadow password suite parameters
+    # ------------------------------------------------------------
+  - name: "5.4.1 Configure shadow password suite parameters (Audit - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.4.1 Configure shadow password suite parameters (Remediation - Manual
+      intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.4.1.1 Ensure password expiration is configured
+    # ------------------------------------------------------------
+  - name: "5.4.1.1 Ensure password expiration is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi -- '^\\h*PASS_MAX_DAYS\\h+\\d+\\b' /etc/login.defs
+      awk -F: '($2~/^\\$.+\\$/) {if($5 > 365 || $5 < 1)print "User: " $1 " PASS_MAX_DAYS: " $5}' /etc/shadow
+    register: audit_5_4_1_1_0
+    changed_when: false
+    failed_when: "'PASS_MAX_DAYS' not in audit_5_4_1_1_0.stdout or 'User:' in audit_5_4_1_1_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.1.1 Ensure password expiration is configured (Remediation)"
+    ansible.builtin.shell: |
+      chage --maxdays 365 <user>
+      chage --maxdays <N> <user>
+      awk -F: '($2~/^\\$.+\\$/) {if($5 > 365 || $5 < 1)system ("chage --maxdays 365 " $1)}' /etc/shadow
+    register: rem_5_4_1_1_0
+    changed_when: rem_5_4_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.1.2 Ensure minimum password days is configured
+    # ------------------------------------------------------------
+  - name: "5.4.1.2 Ensure minimum password days is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Pi -- '^\\h*PASS_MIN_DAYS\\h+\\d+\\b' /etc/login.defs
+      awk -F: '($2~/^\\$.+\\$/) {if($4 < 1)print "User: " $1 " PASS_MIN_DAYS: " $4}' /etc/shadow
+    register: audit_5_4_1_2_0
+    changed_when: false
+    failed_when: "'PASS_MIN_DAYS' not in audit_5_4_1_2_0.stdout or 'User:' in audit_5_4_1_2_0.stdout"
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+  - name: "5.4.1.2 Ensure minimum password days is configured (Remediation)"
+    ansible.builtin.shell: |
+      chage --mindays <N> <user>
+      awk -F: '($2~/^\\$.+\\$/) {if($4 < 1)system ("chage --mindays 1 " $1)}' /etc/shadow
+    register: rem_5_4_1_2_0
+    changed_when: rem_5_4_1_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_1_2_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.4.1.5 Ensure inactive password lock is configured
+    # ------------------------------------------------------------
+  - name: "5.4.1.5 Ensure inactive password lock is configured (Audit)"
+    ansible.builtin.shell: |
+      useradd -D | grep INACTIVE
+      awk -F: '($2~/^\\$.+\\$/) {if($7 > 45 || $7 < 0)print "User: " $1 " INACTIVE: " $7 "Days"}' /etc/shadow
+    register: audit_5_4_1_5_0
+    changed_when: false
+    failed_when: "'INACTIVE' not in audit_5_4_1_5_0.stdout or 'User:' in audit_5_4_1_5_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.1.5 Ensure inactive password lock is configured (Remediation)"
+    ansible.builtin.shell: |
+      useradd -D -f <N>
+      useradd -D -f 45
+      chage --inactive <N> <user>
+      awk -F: '($2~/^\\$.+\\$/) {if($7 > 45 || $7 < 0)system ("chage --inactive 45 " $1)}' /etc/shadow
+    register: rem_5_4_1_5_0
+    changed_when: rem_5_4_1_5_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_1_5_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.2 Configure root and system accounts and environment
+    # ------------------------------------------------------------
+  - name: "5.4.2 Configure root and system accounts and environment (Audit - Manual
+      intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.4.2 Configure root and system accounts and environment (Remediation -
+      Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.4.2.1 Ensure root is the only UID 0 account
+    # ------------------------------------------------------------
+  - name: "5.4.2.1 Ensure root is the only UID 0 account (Audit)"
+    ansible.builtin.shell: |
+      awk -F: '($3 == 0) { print $1 }' /etc/passwd
+    register: audit_5_4_2_1_0
+    changed_when: false
+    failed_when: audit_5_4_2_1_0.stdout != 'root'
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.1 Ensure root is the only UID 0 account (Remediation)"
+    ansible.builtin.shell: |
+      usermod -u 0 root
+    register: rem_5_4_2_1_0
+    changed_when: rem_5_4_2_1_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_2_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.2.2 Ensure root is the only GID 0 account
+    # ------------------------------------------------------------
+  - name: "5.4.2.2 Ensure root is the only GID 0 account (Audit)"
+    ansible.builtin.shell: |
+      awk -F: '($1 !~ /^(sync|shutdown|halt|operator)/ && $4=="0") {print $1":"$4}' /etc/passwd
+    register: audit_5_4_2_2_0
+    changed_when: false
+    failed_when: audit_5_4_2_2_0.stdout != 'root:0'
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.2 Ensure root is the only GID 0 account (Remediation)"
+    ansible.builtin.shell: |
+      usermod -g 0 root
+      groupmod -g 0 root
+    register: rem_5_4_2_2_0
+    changed_when: rem_5_4_2_2_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_2_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.2.3 Ensure group root is the only GID 0 group
+    # ------------------------------------------------------------
+  - name: "5.4.2.3 Ensure group root is the only GID 0 group (Audit)"
+    ansible.builtin.shell: |
+      awk -F: '$3=="0"{print $1":"$3}' /etc/group
+    register: audit_5_4_2_3_0
+    changed_when: false
+    failed_when: audit_5_4_2_3_0.stdout != 'root:0'
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.3 Ensure group root is the only GID 0 group (Remediation)"
+    ansible.builtin.shell: |
+      groupmod -g 0 root
+    register: rem_5_4_2_3_0
+    changed_when: rem_5_4_2_3_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_2_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.2.4 Ensure root account access is controlled
+    # ------------------------------------------------------------
+  - name: "5.4.2.4 Ensure root account access is controlled (Audit)"
+    ansible.builtin.shell: |
+      passwd -S root | awk '$2 ~ /^(P|L)/ {print "User: \\"" $1 "\\" Password is status: " $2}'
+    register: audit_5_4_2_4_0
+    changed_when: false
+    failed_when: "'Password is status: P' not in audit_5_4_2_4_0.stdout and 'Password
+      is status: L' not in audit_5_4_2_4_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.4 Ensure root account access is controlled (Remediation)"
+    ansible.builtin.shell: |
+      usermod -L root
+    register: rem_5_4_2_4_0
+    changed_when: rem_5_4_2_4_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_2_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 5.4.2.5 Ensure root path integrity
+    # ------------------------------------------------------------
+  - name: "5.4.2.5 Ensure root path integrity (Audit)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        a_output2=() l_pmask="0022"
+        l_maxperm="$(printf '%o' $((0777 & ~$l_pmask)))"
+        l_root_path="$(sudo su - root -c env | awk -F= '$1=="PATH"{print $2}')"
+        IFS=":" read -ra a_path_loc <<<"$l_root_path"
+        grep -q -- "::" <<<"$l_root_path" &&
+          a_output2+=(" - root's path contains a empty directory (::)")
+        grep -Pq -- ":\h*$" <<<"$l_root_path" &&
+          a_output2+=(" - root's path contains a trailing (:)")
+        grep -Pq -- '(^\h*|:)\.(:|\h*$)' <<<"$l_root_path" &&
+          a_output2+=(" - root's path contains current working directory (.)")
+        for l_path in "${a_path_loc[@]}"; do
+          if [ -d "$l_path" ]; then
+            while IFS=: read -r l_fmode l_fown; do
+              [ "$l_fown" != "root" ] &&
+                a_output2+=(" - Directory: \"$l_path\" is owned by: \"$l_fown\""
+                  '
+      should be owned by "root"')
+              [ $((l_fmode & l_pmask)) -gt 0 ] &&
+                a_output2+=(" - Directory: \"$l_path\" is mode: \"$l_fmode\""
+                  "
+      and should be mode: \"$l_maxperm\" or more restrictive")
+            done <<<"$(stat -Lc '%#a:%U' "$l_path")"
+          else
+            a_output2+=(" - \"$l_path\" is not a directory")
+          fi
+        done
+        if [ "${#a_output2[@]}" -le 0 ]; then
+          printf '%s\n' "" "- Audit Result:" " ** PASS **" \
+            " - Root's path is correctly configured"
+        else
+          printf '%s\n' "" "- Audit Result:" " ** FAIL **" \
+            "- * Reasons for audit failure * :" "${a_output2[@]}"
+        fi
+      }
+    register: audit_5_4_2_5_0
+    changed_when: false
+    failed_when: "'** FAIL **' in audit_5_4_2_5_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.5 Ensure root path integrity (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "echo 'Manual remediation required for root path integrity'\n"
+    when: audit_5_4_2_5_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.4.2.6 Ensure root user umask is configured
+    # ------------------------------------------------------------
+  - name: "5.4.2.6 Ensure root user umask is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Psi -- '^\h*umask\h+0?[0-7]{3}\b' /root/.bashrc /root/.profile 2>/dev/null | grep -Pv '0[2-7][7]' || true
+    register: audit_5_4_2_6_0
+    changed_when: false
+    failed_when: audit_5_4_2_6_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.2.6 Ensure root user umask is configured (Remediation)"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+    ansible.builtin.shell: "if [ -f /root/.bashrc ]; then sed -i 's/^umask.*/umask
+      027/g' /root/.bashrc; else echo 'umask 027' >> /root/.bashrc; fi\nif [ -f /root/.profile
+      ]; then sed -i 's/^umask.*/umask 027/g' /root/.profile; else echo 'umask 027'
+      >> /root/.profile; fi\n"
+    when: audit_5_4_2_6_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.4.3 Configure user default environment
+    # ------------------------------------------------------------
+  - name: "5.4.3 Configure user default environment (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "5.4.3 Configure user default environment (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 5.4.3.1 Ensure nologin is not listed in /etc/shells
+    # ------------------------------------------------------------
+  - name: "5.4.3.1 Ensure nologin is not listed in /etc/shells (Audit)"
+    ansible.builtin.shell: |
+      grep -Ps '^\h*([^#\n\r]+)?\/nologin\b' /etc/shells
+    register: audit_5_4_3_1_0
+    changed_when: false
+    failed_when: audit_5_4_3_1_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "5.4.3.1 Ensure nologin is not listed in /etc/shells (Remediation)"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+    ansible.builtin.shell: "sed -i '/\\/nologin/d' /etc/shells\n"
+    when: audit_5_4_3_1_0.rc != 0
+
+    # ------------------------------------------------------------
+    # 5.4.3.3 Ensure default user umask is configured
+    # ------------------------------------------------------------
+  - name: "5.4.3.3 Ensure default user umask is configured (Audit)"
+    ansible.builtin.shell: |
+      grep -Psi -- '^\h*umask\b' /etc/profile.d/*.sh
+      grep -Psi -- '^\h*UMASK\b' /etc/login.defs
+    register: audit_5_4_3_3_0
+    changed_when: false
+    failed_when: "'umask' not in audit_5_4_3_3_0.stdout and 'UMASK' not in audit_5_4_3_3_0.stdout"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "5.4.3.3 Ensure default user umask is configured (Remediation)"
+    ansible.builtin.shell: |
+      #!/usr/bin/env bash
+      {
+        while IFS= read -r -d $'\0' l_file; do
+          sed -ri '/^\s*umask\s+0?(0[01][0-7]|0[0-7][^7]|[^0][0-7][07])(\s*|\s+.*)$/s/^/# /' "$l_file"
+        done < <(find /etc/profile.d/ -type f -name '*.sh' -print0)
+      }
+      printf '%s\n' "" "umask 027" >>/etc/profile.d/60-default_umask.sh
+    register: rem_5_4_3_3_0
+    changed_when: rem_5_4_3_3_0.rc == 0
+    ignore_errors: true
+    when: audit_5_4_3_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  post_tasks:
+  - name: "Clean up the temporary directory"
+    ansible.builtin.file:
+      path: "{{ host_dest_dir_temp_cis }}"
+      state: absent
+    register: temp_cleanup
+    changed_when: temp_cleanup.changed
+
