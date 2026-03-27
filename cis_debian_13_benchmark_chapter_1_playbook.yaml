@@ -1,0 +1,1462 @@
+- name: "CIS Debian Linux 13 Benchmark Chapter 1 Playbook"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - cis_vars.yaml
+
+  vars:
+    host_dest_dir_temp_base: "/tmp/cis_temp_dir"
+    host_dest_file_ssh_config: "/etc/ssh/sshd_config"
+
+  pre_tasks:
+  - name: "Get current timestamp with millisecond precision"
+    ansible.builtin.command: date +%s%3N
+    register: timestamp_ms
+    changed_when: false
+
+  - name: "Gather package facts"
+    ansible.builtin.package_facts:
+      manager: auto
+
+  - name: "Set temporary directory variable with timestamp"
+    ansible.builtin.set_fact:
+      host_dest_dir_temp_cis: "{{ host_dest_dir_temp_base }}_{{ timestamp_ms.stdout
+        }}"
+
+  - name: "Create the temporary directory"
+    ansible.builtin.file:
+      path: "{{ host_dest_dir_temp_cis }}"
+      state: directory
+      mode: "0700"
+      owner: root
+      group: root
+    register: temp_dir_creation
+    changed_when: temp_dir_creation.changed
+
+  tasks:
+    # ------------------------------------------------------------
+    # 1.1 Filesystem
+    # ------------------------------------------------------------
+  - name: "1.1 Filesystem (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1 Filesystem (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.1 Configure Filesystem Kernel Modules
+    # ------------------------------------------------------------
+  - name: "1.1.1 Configure Filesystem Kernel Modules (Audit - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.1 Configure Filesystem Kernel Modules (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.1 Ensure cramfs kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.1 Ensure cramfs kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "cramfs"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+cramfs\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+cramfs\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "cramfs.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_1_0
+    changed_when: false
+    failed_when: audit_1_1_1_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.1.1 Ensure cramfs kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r cramfs 2>/dev/null || true
+      rmmod cramfs 2>/dev/null || true
+      echo "install cramfs /bin/false" > /etc/modprobe.d/60-cramfs.conf
+      echo "blacklist cramfs" >> /etc/modprobe.d/60-cramfs.conf
+    register: rem_1_1_1_1_0
+    changed_when: rem_1_1_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.3 Ensure hfs kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.3 Ensure hfs kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "hfs"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+hfs\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+hfs\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "hfs.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_3_0
+    changed_when: false
+    failed_when: audit_1_1_1_3_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.1.3 Ensure hfs kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r hfs 2>/dev/null || true
+      rmmod hfs 2>/dev/null || true
+      echo "install hfs /bin/false" > /etc/modprobe.d/60-hfs.conf
+      echo "blacklist hfs" >> /etc/modprobe.d/60-hfs.conf
+    register: rem_1_1_1_3_0
+    changed_when: rem_1_1_1_3_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_1_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.4 Ensure hfsplus kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.4 Ensure hfsplus kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "hfsplus"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+hfsplus\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+hfsplus\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "hfsplus.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_4_0
+    changed_when: false
+    failed_when: audit_1_1_1_4_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.1.4 Ensure hfsplus kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r hfsplus 2>/dev/null || true
+      rmmod hfsplus 2>/dev/null || true
+      echo "install hfsplus /bin/false" > /etc/modprobe.d/60-hfsplus.conf
+      echo "blacklist hfsplus" >> /etc/modprobe.d/60-hfsplus.conf
+    register: rem_1_1_1_4_0
+    changed_when: rem_1_1_1_4_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_1_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.5 Ensure jffs2 kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.5 Ensure jffs2 kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "jffs2"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+jffs2\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+jffs2\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "jffs2.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_5_0
+    changed_when: false
+    failed_when: audit_1_1_1_5_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.1.5 Ensure jffs2 kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r jffs2 2>/dev/null || true
+      rmmod jffs2 2>/dev/null || true
+      echo "install jffs2 /bin/false" > /etc/modprobe.d/60-jffs2.conf
+      echo "blacklist jffs2" >> /etc/modprobe.d/60-jffs2.conf
+    register: rem_1_1_1_5_0
+    changed_when: rem_1_1_1_5_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_1_5_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.6 Ensure overlay kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.6 Ensure overlay kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "overlay"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+overlay\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+overlay\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "overlay.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_6_0
+    changed_when: false
+    failed_when: audit_1_1_1_6_0.rc != 0
+    ignore_errors: true
+    when: not (docker_is_used | default(false))
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.1.6 Ensure overlay kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r overlay 2>/dev/null || true
+      rmmod overlay 2>/dev/null || true
+      echo "install overlay /bin/false" > /etc/modprobe.d/60-overlay.conf
+      echo "blacklist overlay" >> /etc/modprobe.d/60-overlay.conf
+    register: rem_1_1_1_6_0
+    changed_when: rem_1_1_1_6_0.rc == 0
+    ignore_errors: true
+    when:
+      - not (docker_is_used | default(false))
+      - audit_1_1_1_6_0.rc is defined
+      - audit_1_1_1_6_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.1.8 Ensure udf kernel module is not available
+    # ------------------------------------------------------------
+  - name: "1.1.1.8 Ensure udf kernel module is not available (Audit)"
+    ansible.builtin.shell: |
+      if lsmod | grep -q "udf"; then exit 1; fi
+      if modprobe --showconfig | grep -Pq '\binstall\h+udf\h+/bin/(true|false)\b' && modprobe --showconfig | grep -Pq '\bblacklist\h+udf\b'; then exit 0; fi
+      if ! find /lib/modules/$(uname -r)/ -name "udf.ko*" -print -quit | grep -q .; then exit 0; fi
+      exit 1
+    register: audit_1_1_1_8_0
+    changed_when: false
+    failed_when: audit_1_1_1_8_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.1.8 Ensure udf kernel module is not available (Remediation)"
+    ansible.builtin.shell: |
+      modprobe -r udf 2>/dev/null || true
+      rmmod udf 2>/dev/null || true
+      echo "install udf /bin/false" > /etc/modprobe.d/60-udf.conf
+      echo "blacklist udf" >> /etc/modprobe.d/60-udf.conf
+    register: rem_1_1_1_8_0
+    changed_when: rem_1_1_1_8_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_1_8_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2 Configure Filesystem Partitions
+    # ------------------------------------------------------------
+  - name: "1.1.2 Configure Filesystem Partitions (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.2 Configure Filesystem Partitions (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.1 Configure /tmp
+    # ------------------------------------------------------------
+  - name: "1.1.2.1 Configure /tmp (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.2.1 Configure /tmp (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.1.1 Ensure /tmp is tmpfs or a separate partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.1.1 Ensure /tmp is tmpfs or a separate partition (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /tmp >/dev/null && systemctl is-enabled tmp.mount >/dev/null
+    register: audit_1_1_2_1_1_0
+    changed_when: false
+    failed_when: audit_1_1_2_1_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.1.1 Ensure /tmp is tmpfs or a separate partition (Remediation)"
+    ansible.builtin.shell: |
+      systemctl unmask tmp.mount
+      systemctl enable tmp.mount
+      if ! grep -q "^tmpfs[[:space:]]\+/tmp[[:space:]]" /etc/fstab; then
+        echo "tmpfs /tmp tmpfs defaults,rw,nosuid,nodev,noexec,relatime,size=2G 0 0" >> /etc/fstab
+      fi
+    register: rem_1_1_2_1_1_0
+    changed_when: rem_1_1_2_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_1_1_2_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.1.2 Ensure nodev option set on /tmp partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.1.2 Ensure nodev option set on /tmp partition (Audit - /tmp is a
+      separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /tmp | grep -q nodev
+    register: audit_1_1_2_1_2_0
+    changed_when: false
+    failed_when: audit_1_1_2_1_2_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.1.2 Ensure nodev option set on /tmp partition (Remediation - /tmp
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nodev /tmp || true
+      awk '$2 == "/tmp" { if ($4 !~ /nodev/) $4 = $4 ",nodev" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_1_2_0
+    changed_when: rem_1_1_2_1_2_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_1_2_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.1.3 Ensure nosuid option set on /tmp partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.1.3 Ensure nosuid option set on /tmp partition (Audit - /tmp is a
+      separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /tmp | grep -q nosuid
+    register: audit_1_1_2_1_3_0
+    changed_when: false
+    failed_when: audit_1_1_2_1_3_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.1.3 Ensure nosuid option set on /tmp partition (Remediation - /tmp
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nosuid /tmp || true
+      awk '$2 == "/tmp" { if ($4 !~ /nosuid/) $4 = $4 ",nosuid" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_1_3_0
+    changed_when: rem_1_1_2_1_3_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_1_3_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.1.4 Ensure noexec option set on /tmp partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.1.4 Ensure noexec option set on /tmp partition (Audit - /tmp is a
+      separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /tmp | grep -q noexec
+    register: audit_1_1_2_1_4_0
+    changed_when: false
+    failed_when: audit_1_1_2_1_4_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.1.4 Ensure noexec option set on /tmp partition (Remediation - /tmp
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,noexec /tmp || true
+      awk '$2 == "/tmp" { if ($4 !~ /noexec/) $4 = $4 ",noexec" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_1_4_0
+    changed_when: rem_1_1_2_1_4_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_1_4_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/tmp') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.2 Configure /dev/shm
+    # ------------------------------------------------------------
+  - name: "1.1.2.2 Configure /dev/shm (Audit - /dev/shm is used)"
+    ansible.builtin.shell: |-
+      findmnt -kn /dev/shm >/dev/null
+    register: audit_1_1_2_2_0
+    changed_when: false
+    failed_when: audit_1_1_2_2_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/dev/shm') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "1.1.2.2 Configure /dev/shm (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.2.1 Ensure /dev/shm is tmpfs or a separate partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.2.1 Ensure /dev/shm is tmpfs or a separate partition (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /dev/shm
+    register: audit_1_1_2_2_1
+    changed_when: false
+    failed_when: audit_1_1_2_2_1.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.2.1 Ensure /dev/shm is tmpfs or a separate partition (Remediation)"
+    ansible.builtin.shell: |-
+      if ! grep -q "^tmpfs[[:space:]]\+/dev/shm[[:space:]]" /etc/fstab; then
+        echo "tmpfs /dev/shm tmpfs defaults,rw,nosuid,nodev,noexec,relatime,size=2G 0 0" >> /etc/fstab
+      fi
+      mount -o remount /dev/shm || true
+    register: rem_1_1_2_2_1
+    changed_when: rem_1_1_2_2_1.rc == 0
+    ignore_errors: true
+    when: audit_1_1_2_2_1.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.3 Configure /home
+    # ------------------------------------------------------------
+  - name: "1.1.2.3 Configure /home (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.2.3 Configure /home (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.3.1 Ensure separate partition exists for /home
+    # ------------------------------------------------------------
+  - name: "1.1.2.3.1 Ensure separate partition exists for /home (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /home >/dev/null
+    register: audit_1_1_2_3_1_0
+    changed_when: false
+    failed_when: audit_1_1_2_3_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.3.1 Ensure separate partition exists for /home (Remediation - Manual
+      intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.3.2 Ensure nodev option set on /home partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.3.2 Ensure nodev option set on /home partition (Audit - /home is
+      a separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /home | grep -q nodev
+    register: audit_1_1_2_3_2_0
+    changed_when: false
+    failed_when: audit_1_1_2_3_2_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/home') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.3.2 Ensure nodev option set on /home partition (Remediation - /home
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nodev /home || true
+      awk '$2 == "/home" { if ($4 !~ /nodev/) $4 = $4 ",nodev" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_3_2_0
+    changed_when: rem_1_1_2_3_2_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_3_2_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/home') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.3.3 Ensure nosuid option set on /home partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.3.3 Ensure nosuid option set on /home partition (Audit - /home is
+      a separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /home | grep -q nosuid
+    register: audit_1_1_2_3_3_0
+    changed_when: false
+    failed_when: audit_1_1_2_3_3_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/home') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.3.3 Ensure nosuid option set on /home partition (Remediation - /home
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nosuid /home || true
+      awk '$2 == "/home" { if ($4 !~ /nosuid/) $4 = $4 ",nosuid" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_3_3_0
+    changed_when: rem_1_1_2_3_3_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_3_3_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/home') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.4 Configure /var
+    # ------------------------------------------------------------
+  - name: "1.1.2.4 Configure /var (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.2.4 Configure /var (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.4.1 Ensure separate partition exists for /var
+    # ------------------------------------------------------------
+  - name: "1.1.2.4.1 Ensure separate partition exists for /var (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var >/dev/null
+    register: audit_1_1_2_4_1_0
+    changed_when: false
+    failed_when: audit_1_1_2_4_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.4.1 Ensure separate partition exists for /var (Remediation - Manual
+      intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.4.2 Ensure nodev option set on /var partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.4.2 Ensure nodev option set on /var partition (Audit - /var is a
+      separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var | grep -q nodev
+    register: audit_1_1_2_4_2_0
+    changed_when: false
+    failed_when: audit_1_1_2_4_2_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/var') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.4.2 Ensure nodev option set on /var partition (Remediation - /var
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nodev /var || true
+      awk '$2 == "/var" { if ($4 !~ /nodev/) $4 = $4 ",nodev" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_4_2_0
+    changed_when: rem_1_1_2_4_2_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_4_2_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/var') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.4.3 Ensure nosuid option set on /var partition
+    # ------------------------------------------------------------
+  - name: "1.1.2.4.3 Ensure nosuid option set on /var partition (Audit - /var is a
+      separate partition)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var | grep -q nosuid
+    register: audit_1_1_2_4_3_0
+    changed_when: false
+    failed_when: audit_1_1_2_4_3_0.rc != 0
+    ignore_errors: true
+    when: ansible_mounts | selectattr('mount', 'equalto', '/var') | list | length
+      > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.1.2.4.3 Ensure nosuid option set on /var partition (Remediation - /var
+      is a separate partition)"
+    ansible.builtin.shell: |
+      mount -o remount,nosuid /var || true
+      awk '$2 == "/var" { if ($4 !~ /nosuid/) $4 = $4 ",nosuid" } 1' /etc/fstab > /etc/fstab.tmp && mv /etc/fstab.tmp /etc/fstab
+    register: rem_1_1_2_4_3_0
+    changed_when: rem_1_1_2_4_3_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_1_2_4_3_0.rc != 0
+    - ansible_mounts | selectattr('mount', 'equalto', '/var') | list | length > 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.5 Configure /var/tmp
+    # ------------------------------------------------------------
+  - name: "1.1.2.5 Configure /var/tmp (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/tmp >/dev/null
+    register: audit_1_1_2_5_0
+    changed_when: false
+    failed_when: audit_1_1_2_5_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+  - name: "1.1.2.5 Configure /var/tmp (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.5.1 Ensure separate partition exists for /var/tmp
+    # ------------------------------------------------------------
+  - name: "1.1.2.5.1 Ensure separate partition exists for /var/tmp (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/tmp >/dev/null
+    register: audit_1_1_2_5_1
+    changed_when: false
+    failed_when: audit_1_1_2_5_1.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.5.1 Ensure separate partition exists for /var/tmp (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required to partition /var/tmp"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.5.1 Ensure separate partition exists for /var/tmp
+    # ------------------------------------------------------------
+  - name: "1.1.2.5.1 Ensure separate partition exists for /var/tmp (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/tmp >/dev/null
+    register: audit_1_1_2_5_1
+    changed_when: false
+    failed_when: audit_1_1_2_5_1.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.5.1 Ensure separate partition exists for /var/tmp (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required to partition /var/tmp"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.6 Configure /var/log
+    # ------------------------------------------------------------
+  - name: "1.1.2.6 Configure /var/log (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.1.2.6 Configure /var/log (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.6.1 Ensure separate partition exists for /var/log
+    # ------------------------------------------------------------
+  - name: "1.1.2.6.1 Ensure separate partition exists for /var/log (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/log >/dev/null
+    register: audit_1_1_2_6_1_0
+    changed_when: false
+    failed_when: audit_1_1_2_6_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.6.1 Ensure separate partition exists for /var/log (Remediation -
+      Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.7 Configure /var/log/audit
+    # ------------------------------------------------------------
+  - name: "1.1.2.7 Configure /var/log/audit (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/log/audit >/dev/null
+    register: audit_1_1_2_7_0
+    changed_when: false
+    failed_when: audit_1_1_2_7_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+  - name: "1.1.2.7 Configure /var/log/audit (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.1.2.7.1 Ensure separate partition exists for /var/log/audit
+    # ------------------------------------------------------------
+  - name: "1.1.2.7.1 Ensure separate partition exists for /var/log/audit (Audit)"
+    ansible.builtin.shell: |-
+      findmnt -kn /var/log/audit >/dev/null
+    register: audit_1_1_2_7_1
+    changed_when: false
+    failed_when: audit_1_1_2_7_1.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.1.2.7.1 Ensure separate partition exists for /var/log/audit (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required to partition /var/log/audit"
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.2 Package Management
+    # ------------------------------------------------------------
+  - name: "1.2 Package Management (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.2 Package Management (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.2.1 Configure Package Repositories
+    # ------------------------------------------------------------
+  - name: "1.2.1 Configure Package Repositories (Audit)"
+    ansible.builtin.shell: |
+      grep -PRLs -- '^([^#\n\r]+)?\bSigned-By\b' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null || true
+    register: audit_1_2_1_0
+    changed_when: false
+    failed_when: audit_1_2_1_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "1.2.1 Configure Package Repositories (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.2.1.2 Ensure weak dependencies are configured
+    # ------------------------------------------------------------
+  - name: "1.2.1.2 Ensure weak dependencies are configured (Audit)"
+    ansible.builtin.shell: |-
+      apt-config dump | grep -q 'APT::Install-Recommends "0"' && apt-config dump | grep -q 'APT::Install-Suggests "0"'
+    register: audit_1_2_1_2_0
+    changed_when: false
+    failed_when: "audit_1_2_1_2_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.2.1.2 Ensure weak dependencies are configured (Remediation)"
+    ansible.builtin.shell: |
+      echo 'APT::Install-Recommends "0";' > /etc/apt/apt.conf.d/60-cis-weak-deps.conf
+      echo 'APT::Install-Suggests "0";' >> /etc/apt/apt.conf.d/60-cis-weak-deps.conf
+    register: rem_1_2_1_2_0
+    changed_when: rem_1_2_1_2_0.rc == 0
+    ignore_errors: true
+    when: audit_1_2_1_2_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.2.1.3 Ensure access to gpg key files are configured
+    # ------------------------------------------------------------
+  - name: "1.2.1.3 Ensure access to gpg key files are configured (Audit)"
+    ansible.builtin.shell: |-
+      find -L /usr/share/keyrings/ /etc/apt/trusted.gpg.d/ -mount -xdev -type f \( ! -user root -o ! -group root -o -perm /133 \) -name '*gpg' -print0 2>/dev/null | xargs -0 -I{} echo "Invalid permissions on {}"
+    register: audit_1_2_1_3_0
+    changed_when: false
+    failed_when: audit_1_2_1_3_0.stdout | length > 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_2__server", "cis", "automated"]
+
+  - name: "1.2.1.3 Ensure access to gpg key files are configured (Remediation)"
+    ansible.builtin.shell: |-
+      find -L /usr/share/keyrings/ /etc/apt/trusted.gpg.d/ -mount -xdev -type f -name '*gpg' -exec chown root:root {} \; -exec chmod u-x,g-wx,o-wx {} \;
+    register: rem_1_2_1_3_0
+    changed_when: rem_1_2_1_3_0.rc == 0
+    ignore_errors: true
+    when: audit_1_2_1_3_0.stdout | length > 0
+    tags: ["level_1__server", "level_2__server", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.2.2 Configure Package Updates
+    # ------------------------------------------------------------
+  - name: "1.2.2 Configure Package Updates (Audit)"
+    ansible.builtin.shell: |-
+      apt update && apt -s upgrade | grep -q "0 upgraded, 0 newly installed"
+    register: audit_1_2_2_0
+    changed_when: false
+    failed_when: audit_1_2_2_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+  - name: "1.2.2 Configure Package Updates (Remediation)"
+    ansible.builtin.shell: |-
+      apt update && apt upgrade -y
+    register: rem_1_2_2_0
+    changed_when: rem_1_2_2_0.rc == 0
+    ignore_errors: true
+    when: audit_1_2_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.3 Mandatory Access Control
+    # ------------------------------------------------------------
+  - name: "1.3 Mandatory Access Control (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.3 Mandatory Access Control (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.3.1 Configure AppArmor
+    # ------------------------------------------------------------
+  - name: "1.3.1 Configure AppArmor (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.3.1 Configure AppArmor (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.3.1.1 Ensure apparmor packages are installed
+    # ------------------------------------------------------------
+  - name: "1.3.1.1 Ensure apparmor packages are installed (Audit)"
+    ansible.builtin.shell: |-
+      dpkg-query -W -f='${Status}' apparmor apparmor-utils 2>/dev/null | grep -q "install ok installed"
+    register: audit_1_3_1_1_0
+    changed_when: false
+    failed_when: "audit_1_3_1_1_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.3.1.1 Ensure apparmor packages are installed (Remediation)"
+    ansible.builtin.shell: |-
+      apt-get install -y apparmor apparmor-utils
+    register: rem_1_3_1_1_0
+    changed_when: rem_1_3_1_1_0.rc == 0
+    ignore_errors: true
+    when: audit_1_3_1_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.3.1.2 Ensure AppArmor is enabled
+    # ------------------------------------------------------------
+  - name: "1.3.1.2 Ensure AppArmor is enabled (Audit)"
+    ansible.builtin.shell: |-
+      ! grep "^\s*linux" /boot/grub/grub.cfg | grep -q "apparmor=0"
+    register: audit_1_3_1_2_0
+    changed_when: false
+    failed_when: audit_1_3_1_2_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.3.1.2 Ensure AppArmor is enabled (Remediation)"
+    ansible.builtin.shell: |-
+      sed -i 's/^GRUB_CMDLINE_LINUX="/GRUB_CMDLINE_LINUX="apparmor=1 security=apparmor /' /etc/default/grub && update-grub
+    register: rem_1_3_1_2_0
+    changed_when: rem_1_3_1_2_0.rc == 0
+    ignore_errors: true
+    when: audit_1_3_1_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.3.1.3 Ensure all AppArmor Profiles are enforcing
+    # ------------------------------------------------------------
+  - name: "1.3.1.3 Ensure all AppArmor Profiles are enforcing (Audit)"
+    ansible.builtin.shell: |-
+      apparmor_status --profiled >/dev/null 2>&1 && [ "$(apparmor_status --complaining | grep -o '^[0-9]\+')" = "0" ] && [ "$(apparmor_status | grep -P '^\s*[0-9]+\s+processes are unconfined' | grep -o '^[0-9]\+')" = "0" ]
+    register: audit_1_3_1_3_0
+    changed_when: false
+    failed_when: audit_1_3_1_3_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.3.1.3 Ensure all AppArmor Profiles are enforcing (Remediation)"
+    ansible.builtin.shell: |-
+      aa-enforce /etc/apparmor.d/* 2>/dev/null || true
+    register: rem_1_3_1_3_0
+    changed_when: rem_1_3_1_3_0.rc == 0
+    ignore_errors: true
+    when: audit_1_3_1_3_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.4 Configure Bootloader
+    # ------------------------------------------------------------
+  - name: "1.4 Configure Bootloader (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.4 Configure Bootloader (Remediation - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.4.1 Ensure bootloader password is set
+    # ------------------------------------------------------------
+  - name: "1.4.1 Ensure bootloader password is set (Audit)"
+    ansible.builtin.shell: |-
+      grep -q "^set superusers" /boot/grub/grub.cfg
+    register: audit_1_4_1_0
+    changed_when: false
+    failed_when: audit_1_4_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.4.1 Ensure bootloader password is set (Remediation)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required: Run grub-mkpasswd-pbkdf2 to generate a hash and add it to /etc/grub.d/ configuration."
+    when: audit_1_4_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.5 Configure Additional Process Hardening
+    # ------------------------------------------------------------
+  - name: "1.5 Configure Additional Process Hardening (Audit - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.5 Configure Additional Process Hardening (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.5.1 Ensure fs.protected_hardlinks is configured
+    # ------------------------------------------------------------
+  - name: "1.5.1 Ensure fs.protected_hardlinks is configured (Audit)"
+    ansible.builtin.shell: |-
+      sysctl fs.protected_hardlinks | grep -q "1"
+    register: audit_1_5_1_0
+    changed_when: false
+    failed_when: "audit_1_5_1_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.1 Ensure fs.protected_hardlinks is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "fs.protected_hardlinks = 1" > /etc/sysctl.d/60-fs.conf && sysctl -w fs.protected_hardlinks=1
+    register: rem_1_5_1_0
+    changed_when: rem_1_5_1_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_1_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.2 Ensure fs.protected_symlinks is configured
+    # ------------------------------------------------------------
+  - name: "1.5.2 Ensure fs.protected_symlinks is configured (Audit)"
+    ansible.builtin.shell: |-
+      sysctl fs.protected_symlinks | grep -q "1"
+    register: audit_1_5_2_0
+    changed_when: false
+    failed_when: "audit_1_5_2_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.5.2 Ensure fs.protected_symlinks is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "fs.protected_symlinks = 1" > /etc/sysctl.d/60-fs.conf && sysctl -w fs.protected_symlinks=1
+    register: rem_1_5_2_0
+    changed_when: rem_1_5_2_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_2_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.4 Ensure fs.suid_dumpable is configured
+    # ------------------------------------------------------------
+  - name: "1.5.4 Ensure fs.suid_dumpable is configured (Audit)"
+    ansible.builtin.shell: |-
+      sysctl fs.suid_dumpable | grep -q "0"
+    register: audit_1_5_4_0
+    changed_when: false
+    failed_when: "audit_1_5_4_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.4 Ensure fs.suid_dumpable is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "fs.suid_dumpable = 0" > /etc/sysctl.d/60-fs.conf && sysctl -w fs.suid_dumpable=0
+    register: rem_1_5_4_0
+    changed_when: rem_1_5_4_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.5 Ensure kernel.dmesg_restrict is configured
+    # ------------------------------------------------------------
+  - name: "1.5.5 Ensure kernel.dmesg_restrict is configured (Audit)"
+    ansible.builtin.shell: |-
+      sysctl kernel.dmesg_restrict | grep -q "1"
+    register: audit_1_5_5_0
+    changed_when: false
+    failed_when: "audit_1_5_5_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.5 Ensure kernel.dmesg_restrict is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "kernel.dmesg_restrict = 1" > /etc/sysctl.d/60-kernel.conf && sysctl -w kernel.dmesg_restrict=1
+    register: rem_1_5_5_0
+    changed_when: rem_1_5_5_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_5_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.6 Ensure prelink is not installed
+    # ------------------------------------------------------------
+  - name: "1.5.6 Ensure prelink is not installed (Audit)"
+    ansible.builtin.shell: |-
+      ! dpkg-query -s prelink >/dev/null 2>&1
+    register: audit_1_5_6_0
+    changed_when: false
+    failed_when: audit_1_5_6_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.6 Ensure prelink is not installed (Remediation)"
+    ansible.builtin.shell: |-
+      prelink -ua 2>/dev/null || true
+      apt-get purge -y prelink
+    register: rem_1_5_6_0
+    changed_when: rem_1_5_6_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_6_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.7 Ensure Automatic Error Reporting is configured
+    # ------------------------------------------------------------
+  - name: "1.5.7 Ensure Automatic Error Reporting is configured (Audit)"
+    ansible.builtin.shell: |-
+      ! systemctl is-active --quiet apport.service && ! dpkg-query -s apport >/dev/null 2>&1
+    register: audit_1_5_7_0
+    changed_when: false
+    failed_when: audit_1_5_7_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.7 Ensure Automatic Error Reporting is configured (Remediation)"
+    ansible.builtin.shell: |-
+      systemctl stop apport.service 2>/dev/null || true
+      systemctl mask apport.service 2>/dev/null || true
+      apt-get purge -y apport
+    register: rem_1_5_7_0
+    changed_when: rem_1_5_7_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_7_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.8 Ensure kernel.kptr_restrict is configured
+    # ------------------------------------------------------------
+  - name: "1.5.8 Ensure kernel.kptr_restrict is configured (Audit)"
+    ansible.builtin.shell: |-
+      sysctl kernel.kptr_restrict | grep -E -q "(1|2)"
+    register: audit_1_5_8_0
+    changed_when: false
+    failed_when: "audit_1_5_8_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.8 Ensure kernel.kptr_restrict is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "kernel.kptr_restrict = 2" > /etc/sysctl.d/60-kernel.conf && sysctl -w kernel.kptr_restrict=2
+    register: rem_1_5_8_0
+    changed_when: rem_1_5_8_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_8_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.5.11 Ensure core file size is configured
+    # ------------------------------------------------------------
+  - name: "1.5.11 Ensure core file size is configured (Audit)"
+    ansible.builtin.shell: |-
+      grep -Eq "^\s*\*\s+hard\s+core\s+0" /etc/security/limits.conf /etc/security/limits.d/* 2>/dev/null && ! grep -Eq "^\s*\*\s+hard\s+core\s+[1-9]" /etc/security/limits.conf /etc/security/limits.d/* 2>/dev/null
+    register: audit_1_5_11_0
+    changed_when: false
+    failed_when: audit_1_5_11_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.5.11 Ensure core file size is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "* hard core 0" > /etc/security/limits.d/60-limits.conf
+    register: rem_1_5_11_0
+    changed_when: rem_1_5_11_0.rc == 0
+    ignore_errors: true
+    when: audit_1_5_11_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6 Configure Command Line Warning Banners
+    # ------------------------------------------------------------
+  - name: "1.6 Configure Command Line Warning Banners (Audit - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.6 Configure Command Line Warning Banners (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.6.1 Ensure /etc/motd is configured
+    # ------------------------------------------------------------
+  - name: "1.6.1 Ensure /etc/motd is configured (Audit)"
+    ansible.builtin.shell: |-
+      ! grep -Psqi '(\v|\r|\m|\s|Debian)' /etc/motd /etc/motd.d/* 2>/dev/null
+    register: audit_1_6_1_0
+    changed_when: false
+    failed_when: "audit_1_6_1_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.1 Ensure /etc/motd is configured (Remediation - motd is not used)"
+    ansible.builtin.shell: |-
+      rm -f /etc/motd /etc/motd.d/*
+    register: rem_1_6_1_0
+    changed_when: rem_1_6_1_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_6_1_0.rc != 0
+    - cis_use_motd | default(true) == false
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6.2 Ensure /etc/issue is configured
+    # ------------------------------------------------------------
+  - name: "1.6.2 Ensure /etc/issue is configured (Audit)"
+    ansible.builtin.shell: |-
+      ! grep -Psqi '(\v|\r|\m|\s|Debian)' /etc/issue
+    register: audit_1_6_2_0
+    changed_when: false
+    failed_when: audit_1_6_2_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.2 Ensure /etc/issue is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "Authorized users only. All activity may be monitored and reported." > /etc/issue
+    register: rem_1_6_2_0
+    changed_when: rem_1_6_2_0.rc == 0
+    ignore_errors: true
+    when: audit_1_6_2_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6.3 Ensure /etc/issue.net is configured
+    # ------------------------------------------------------------
+  - name: "1.6.3 Ensure /etc/issue.net is configured (Audit)"
+    ansible.builtin.shell: |-
+      ! grep -Psqi '(\v|\r|\m|\s|Debian)' /etc/issue.net
+    register: audit_1_6_3_0
+    changed_when: false
+    failed_when: audit_1_6_3_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.3 Ensure /etc/issue.net is configured (Remediation)"
+    ansible.builtin.shell: |-
+      echo "Authorized users only. All activity may be monitored and reported." > /etc/issue.net
+    register: rem_1_6_3_0
+    changed_when: rem_1_6_3_0.rc == 0
+    ignore_errors: true
+    when: audit_1_6_3_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6.4 Ensure access to /etc/motd is configured
+    # ------------------------------------------------------------
+  - name: "1.6.4 Ensure access to /etc/motd is configured (Audit)"
+    ansible.builtin.shell: |-
+      stat -c "%a %u %g" /etc/motd 2>/dev/null | grep -Eq "^(644|640|600|444|440|400) 0 0$"
+    register: audit_1_6_4_0
+    changed_when: false
+    failed_when: audit_1_6_4_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.4 Ensure access to /etc/motd is configured (Remediation)"
+    ansible.builtin.shell: |-
+      chown root:root /etc/motd 2>/dev/null || true
+      chmod 644 /etc/motd 2>/dev/null || true
+    register: rem_1_6_4_0
+    changed_when: rem_1_6_4_0.rc == 0
+    ignore_errors: true
+    when: audit_1_6_4_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6.5 Ensure access to /etc/issue is configured
+    # ------------------------------------------------------------
+  - name: "1.6.5 Ensure access to /etc/issue is configured (Audit)"
+    ansible.builtin.shell: |-
+      stat -c "%a %u %g" /etc/issue | grep -Eq "^(644|640|600|444|440|400) 0 0$"
+    register: audit_1_6_5_0
+    changed_when: false
+    failed_when: audit_1_6_5_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.5 Ensure access to /etc/issue is configured (Remediation)"
+    ansible.builtin.shell: |-
+      chown root:root /etc/issue 2>/dev/null || true
+      chmod 644 /etc/issue 2>/dev/null || true
+    register: rem_1_6_5_0
+    changed_when: rem_1_6_5_0.rc == 0
+    ignore_errors: true
+    when: audit_1_6_5_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.6.6 Ensure access to /etc/issue.net is configured
+    # ------------------------------------------------------------
+  - name: "1.6.6 Ensure access to /etc/issue.net is configured (Audit)"
+    ansible.builtin.shell: |-
+      stat -c "%a %u %g" /etc/issue.net | grep -Eq "^(644|640|600|444|440|400) 0 0$"
+    register: audit_1_6_6_0
+    changed_when: false
+    failed_when: audit_1_6_6_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.6.6 Ensure access to /etc/issue.net is configured (Remediation)"
+    ansible.builtin.shell: |-
+      chown root:root /etc/issue.net 2>/dev/null || true
+      chmod 644 /etc/issue.net 2>/dev/null || true
+    register: rem_1_6_6_0
+    changed_when: rem_1_6_6_0.rc == 0
+    ignore_errors: true
+    when: audit_1_6_6_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7 Configure GNOME Display Manager
+    # ------------------------------------------------------------
+  - name: "1.7 Configure GNOME Display Manager (Audit - Manual intervention required)"
+    ansible.builtin.debug:
+      msg: "Manual audit required"
+    tags: ["cis", "manual"]
+
+  - name: "1.7 Configure GNOME Display Manager (Remediation - Manual intervention
+      required)"
+    ansible.builtin.debug:
+      msg: "Manual remediation required"
+    tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 1.7.1 Ensure GDM is removed
+    # ------------------------------------------------------------
+  - name: "1.7.1 Ensure GDM is removed (Audit)"
+    ansible.builtin.shell: |-
+      ! dpkg-query -s gdm3 >/dev/null 2>&1
+    register: audit_1_7_1_0
+    changed_when: false
+    failed_when: audit_1_7_1_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "cis", "automated"]
+
+  - name: "1.7.1 Ensure GDM is removed (Remediation)"
+    ansible.builtin.shell: |-
+      apt-get purge -y gdm3 && apt-get autoremove -y
+    register: rem_1_7_1_0
+    changed_when: rem_1_7_1_0.rc == 0
+    ignore_errors: true
+    when: audit_1_7_1_0.rc != 0
+    tags: ["level_2__server", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.2 Ensure GDM login banner is configured
+    # ------------------------------------------------------------
+  - name: "1.7.2 Ensure GDM login banner is configured (Audit)"
+    ansible.builtin.shell: |-
+      grep -q "banner-message-enable=true" /etc/gdm3/greeter.dconf-defaults 2>/dev/null
+    register: audit_1_7_2_0
+    changed_when: false
+    failed_when: "audit_1_7_2_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.2 Ensure GDM login banner is configured (Remediation - gdm3 is not
+      installed)"
+    ansible.builtin.shell: |-
+      mkdir -p /etc/dconf/profile /etc/dconf/db/gdm.d
+      echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > /etc/dconf/profile/gdm
+      echo -e "[org/gnome/login-screen]\nbanner-message-enable=true\nbanner-message-text='Authorized uses only'" > /etc/dconf/db/gdm.d/01-banner-message
+      dconf update 2>/dev/null || true
+    register: rem_1_7_2_0
+    changed_when: rem_1_7_2_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_7_2_0.rc != 0
+    - "'gdm3' in ansible_facts.packages"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.3 Ensure GDM disable-user-list option is enabled
+    # ------------------------------------------------------------
+  - name: "1.7.3 Ensure GDM disable-user-list option is enabled (Audit)"
+    ansible.builtin.shell: |-
+      grep -q "disable-user-list=true" /etc/gdm3/greeter.dconf-defaults 2>/dev/null
+    register: audit_1_7_3_0
+    changed_when: false
+    failed_when: "audit_1_7_3_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.3 Ensure GDM disable-user-list option is enabled (Remediation - gdm3
+      is installed)"
+    ansible.builtin.shell: |-
+      mkdir -p /etc/dconf/profile /etc/dconf/db/gdm.d
+      echo -e "user-db:user\nsystem-db:gdm\nfile-db:/usr/share/gdm/greeter-dconf-defaults" > /etc/dconf/profile/gdm
+      echo -e "[org/gnome/login-screen]\ndisable-user-list=true" > /etc/dconf/db/gdm.d/00-login-screen
+      dconf update 2>/dev/null || true
+    register: rem_1_7_3_0
+    changed_when: rem_1_7_3_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_7_3_0.rc != 0
+    - "'gdm3' in ansible_facts.packages"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.4 Ensure GDM screen locks when the user is idle
+    # ------------------------------------------------------------
+  - name: "1.7.4 Ensure GDM screen locks when the user is idle (Audit)"
+    ansible.builtin.shell: |-
+      gsettings get org.gnome.desktop.screensaver lock-delay 2>/dev/null | grep -q "uint32 [0-5]$" && gsettings get org.gnome.desktop.session idle-delay 2>/dev/null | grep -Eq "uint32 ([1-9]|[1-9][0-9]|[1-8][0-9]{2}|900)$"
+    register: audit_1_7_4_0
+    changed_when: false
+    failed_when: audit_1_7_4_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.4 Ensure GDM screen locks when the user is idle (Remediation)"
+    ansible.builtin.shell: |-
+      mkdir -p /etc/dconf/profile /etc/dconf/db/local.d
+      echo -e "user-db:user\nsystem-db:local" > /etc/dconf/profile/user
+      echo -e "[org/gnome/desktop/screensaver]\nlock-delay=uint32 5\n[org/gnome/desktop/session]\nidle-delay=uint32 900" > /etc/dconf/db/local.d/00-screensaver
+      dconf update 2>/dev/null || true
+    register: rem_1_7_4_0
+    changed_when: rem_1_7_4_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_7_4_0.rc != 0
+    - "'gdm3' in ansible_facts.packages"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.8 Ensure GDM autorun-never is enabled
+    # ------------------------------------------------------------
+  - name: "1.7.8 Ensure GDM autorun-never is enabled (Audit)"
+    ansible.builtin.shell: |-
+      gsettings get org.gnome.desktop.media-handling autorun-never 2>/dev/null | grep -q "true"
+    register: audit_1_7_8_0
+    changed_when: false
+    failed_when: "audit_1_7_8_0.rc != 0"
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.8 Ensure GDM autorun-never is enabled (Remediation - gdm3 is installed)"
+    ansible.builtin.shell: |-
+      mkdir -p /etc/dconf/profile /etc/dconf/db/local.d
+      echo -e "user-db:user\nsystem-db:local" > /etc/dconf/profile/user
+      echo -e "[org/gnome/desktop/media-handling]\nautorun-never=true" > /etc/dconf/db/local.d/00-media-autorun
+      dconf update 2>/dev/null || true
+    register: rem_1_7_8_0
+    changed_when: rem_1_7_8_0.rc == 0
+    ignore_errors: true
+    when:
+    - audit_1_7_8_0.rc != 0
+    - "'gdm3' in ansible_facts.packages"
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.9 Ensure GDM autorun-never is not overridden
+    # ------------------------------------------------------------
+  - name: "1.7.9 Ensure GDM autorun-never is not overridden (Audit)"
+    ansible.builtin.shell: |-
+      grep -q "autorun-never=true" /etc/dconf/db/local.d/locks/* 2>/dev/null
+    register: audit_1_7_9_0
+    changed_when: false
+    failed_when: audit_1_7_9_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.9 Ensure GDM autorun-never is not overridden (Remediation)"
+    ansible.builtin.shell: |-
+      mkdir -p /etc/dconf/db/local.d/locks
+      echo -e "/org/gnome/desktop/media-handling/autorun-never" > /etc/dconf/db/local.d/locks/00-media-autorun
+      dconf update 2>/dev/null || true
+    register: rem_1_7_9_0
+    changed_when: rem_1_7_9_0.rc == 0
+    ignore_errors: true
+    when: audit_1_7_9_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.10 Ensure XDMCP is not enabled
+    # ------------------------------------------------------------
+  - name: "1.7.10 Ensure XDMCP is not enabled (Audit)"
+    ansible.builtin.shell: |-
+      ! grep -Psqi '^\s*Enable\s*=\s*true' /etc/gdm3/custom.conf /etc/gdm3/daemon.conf 2>/dev/null
+    register: audit_1_7_10_0
+    changed_when: false
+    failed_when: audit_1_7_10_0.rc != 0
+    ignore_errors: true
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  - name: "1.7.10 Ensure XDMCP is not enabled (Remediation)"
+    ansible.builtin.shell: |-
+      sed -i '/^Enable\s*=\s*true/s/^/#/' /etc/gdm3/custom.conf 2>/dev/null || true
+    register: rem_1_7_10_0
+    changed_when: rem_1_7_10_0.rc == 0
+    ignore_errors: true
+    when: audit_1_7_10_0.rc != 0
+    tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 1.7.11 Ensure Xwayland is configured
+    # ------------------------------------------------------------
+  - name: "1.7.11 Ensure Xwayland is configured (Audit)"
+    ansible.builtin.shell: |-
+      grep -Psqi '^\s*WaylandEnable\s*=\s*false' /etc/gdm3/custom.conf /etc/gdm3/daemon.conf 2>/dev/null
+    register: audit_1_7_11_0
+    changed_when: false
+    failed_when: audit_1_7_11_0.rc != 0
+    ignore_errors: true
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  - name: "1.7.11 Ensure Xwayland is configured (Remediation)"
+    ansible.builtin.shell: |-
+      sed -i '/^\s*\[daemon\]/a WaylandEnable=false' /etc/gdm3/custom.conf 2>/dev/null || true
+    register: rem_1_7_11_0
+    changed_when: rem_1_7_11_0.rc == 0
+    ignore_errors: true
+    when: audit_1_7_11_0.rc != 0
+    tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
+
+  post_tasks:
+  - name: "Clean up the temporary directory"
+    ansible.builtin.file:
+      path: "{{ host_dest_dir_temp_cis }}"
+      state: absent
+    register: temp_cleanup
+    changed_when: temp_cleanup.changed
+
