@@ -71,7 +71,7 @@
     register: rem_5_1_0
     changed_when: rem_5_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_1_0.rc != 0
+    when: (audit_5_1_0.rc is defined and audit_5_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -82,7 +82,7 @@
       stat -Lc 'Mode: "%#a" Owner: "%U" Group: "%G"' /etc/ssh/sshd_config | grep -E -q 'Mode: "(0600|0400)" Owner: "root" Group: "root"'
     register: audit_5_1_1_0
     changed_when: false
-    failed_when: audit_5_1_1_0.rc != 0
+    failed_when: (audit_5_1_1_0.rc is defined and audit_5_1_1_0.rc != 0)
     ignore_errors: true
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
@@ -93,7 +93,7 @@
     register: rem_5_1_1_0
     changed_when: rem_5_1_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_1_1_0.rc != 0
+    when: (audit_5_1_1_0.rc is defined and audit_5_1_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -126,7 +126,7 @@
     ansible.builtin.shell: "# Manual remediation required to choose AllowUsers or
       AllowGroups\n# This is a placeholder that does not automatically modify since
       user lists are site-specific.\necho 'Manual remediation required'\n"
-    when: audit_5_1_4_0.rc != 0 and audit_5_1_4_1.rc != 0
+    when: (audit_5_1_4_0.rc is defined and audit_5_1_4_0.rc != 0) or (audit_5_1_4_1.rc is defined and audit_5_1_4_1.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.5 Ensure sshd Banner is configured
@@ -161,7 +161,7 @@
     register: rem_5_1_5_0
     changed_when: rem_5_1_5_0.rc == 0
     ignore_errors: true
-    when: audit_5_1_5_0.rc != 0
+    when: (audit_5_1_5_0.rc is defined and audit_5_1_5_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -187,7 +187,7 @@
     changed_when: rem_5_1_6_0.rc == 0
     ignore_errors: true
     when:
-      - audit_5_1_6_0.rc != 0
+      - (audit_5_1_6_0.rc is defined and audit_5_1_6_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -207,7 +207,7 @@
     ansible.builtin.shell: "sed -i 's/^\\s*#\\s*DisableForwarding.*/DisableForwarding
       yes/g' /etc/ssh/sshd_config\nif ! grep -qi '^DisableForwarding yes' /etc/ssh/sshd_config;
       then echo 'DisableForwarding yes' >> /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_8_0.rc != 0
+    when: (audit_5_1_8_0.rc is defined and audit_5_1_8_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.9 Ensure sshd GSSAPIAuthentication is disabled
@@ -239,7 +239,7 @@
     ansible.builtin.shell: "sed -i 's/^\\s*#\\s*GSSAPIAuthentication.*/GSSAPIAuthentication
       no/g' /etc/ssh/sshd_config\nif ! grep -qi '^GSSAPIAuthentication no' /etc/ssh/sshd_config;
       then echo 'GSSAPIAuthentication no' >> /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_9_0.rc != 0
+    when: (audit_5_1_9_0.rc is defined and audit_5_1_9_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.11 Ensure sshd IgnoreRhosts is enabled
@@ -258,7 +258,7 @@
     ansible.builtin.shell: "sed -i 's/^\\s*#\\s*IgnoreRhosts.*/IgnoreRhosts yes/g'
       /etc/ssh/sshd_config\nif ! grep -qi '^IgnoreRhosts yes' /etc/ssh/sshd_config;
       then echo 'IgnoreRhosts yes' >> /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_11_0.rc != 0
+    when: (audit_5_1_11_0.rc is defined and audit_5_1_11_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.12 Ensure sshd KexAlgorithms is configured
@@ -278,7 +278,7 @@
       sed -i 's/^KexAlgorithms.*/KexAlgorithms -diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1/'
       /etc/ssh/sshd_config; else echo 'KexAlgorithms -diffie-hellman-group1-sha1,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1'
       >> /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_12_0.rc != 0
+    when: (audit_5_1_12_0.rc is defined and audit_5_1_12_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.14 Ensure sshd LoginGraceTime is configured
@@ -299,7 +299,7 @@
       /etc/ssh/sshd_config\nif ! grep -qi '^LoginGraceTime ' /etc/ssh/sshd_config;
       then echo 'LoginGraceTime 60' >> /etc/ssh/sshd_config; else sed -i 's/^LoginGraceTime.*/LoginGraceTime
       60/' /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_14_0.rc != 0
+    when: (audit_5_1_14_0.rc is defined and audit_5_1_14_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.15 Ensure sshd LogLevel is configured
@@ -332,7 +332,7 @@
       if ! grep -qi '^LogLevel ' /etc/ssh/sshd_config; then echo 'LogLevel INFO' >>
       /etc/ssh/sshd_config; else sed -i 's/^LogLevel.*/LogLevel INFO/' /etc/ssh/sshd_config;
       fi\n"
-    when: audit_5_1_15_0.rc != 0
+    when: (audit_5_1_15_0.rc is defined and audit_5_1_15_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.16 Ensure sshd MACs are configured
@@ -352,7 +352,7 @@
       's/^MACs.*/MACs -hmac-md5,hmac-md5-96,hmac-ripemd160,hmac-sha1-96,umac-64@openssh.com,hmac-md5-etm@openssh.com,hmac-md5-96-etm@openssh.com,hmac-ripemd160-etm@openssh.com,hmac-sha1-96-etm@openssh.com,umac-64-etm@openssh.com,umac-128-etm@openssh.com/'
       /etc/ssh/sshd_config; else echo 'MACs -hmac-md5,hmac-md5-96,hmac-ripemd160,hmac-sha1-96,umac-64@openssh.com,hmac-md5-etm@openssh.com,hmac-md5-96-etm@openssh.com,hmac-ripemd160-etm@openssh.com,hmac-sha1-96-etm@openssh.com,umac-64-etm@openssh.com,umac-128-etm@openssh.com'
       >> /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_16_0.rc != 0
+    when: (audit_5_1_16_0.rc is defined and audit_5_1_16_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.17 Ensure sshd MaxAuthTries is configured
@@ -387,7 +387,7 @@
       if ! grep -qi '^MaxAuthTries ' /etc/ssh/sshd_config; then echo 'MaxAuthTries
       4' >> /etc/ssh/sshd_config; else sed -i 's/^MaxAuthTries.*/MaxAuthTries 4/'
       /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_17_0.rc != 0
+    when: (audit_5_1_17_0.rc is defined and audit_5_1_17_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.18 Ensure sshd MaxSessions is configured
@@ -422,7 +422,7 @@
       if ! grep -qi '^MaxSessions ' /etc/ssh/sshd_config; then echo 'MaxSessions 10'
       >> /etc/ssh/sshd_config; else sed -i 's/^MaxSessions.*/MaxSessions 10/' /etc/ssh/sshd_config;
       fi\n"
-    when: audit_5_1_18_0.rc != 0
+    when: (audit_5_1_18_0.rc is defined and audit_5_1_18_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.19 Ensure sshd MaxStartups is configured
@@ -442,7 +442,7 @@
       /etc/ssh/sshd_config\nif ! grep -qi '^MaxStartups ' /etc/ssh/sshd_config; then
       echo 'MaxStartups 10:30:60' >> /etc/ssh/sshd_config; else sed -i 's/^MaxStartups.*/MaxStartups
       10:30:60/' /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_19_0.rc != 0
+    when: (audit_5_1_19_0.rc is defined and audit_5_1_19_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.21 Ensure sshd PermitRootLogin is disabled
@@ -475,7 +475,7 @@
       no/g' /etc/ssh/sshd_config\nif ! grep -qi '^PermitRootLogin ' /etc/ssh/sshd_config;
       then echo 'PermitRootLogin no' >> /etc/ssh/sshd_config; else sed -i 's/^PermitRootLogin.*/PermitRootLogin
       no/' /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_21_0.rc != 0
+    when: (audit_5_1_21_0.rc is defined and audit_5_1_21_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.1.23 Ensure sshd UsePAM is enabled
@@ -494,7 +494,7 @@
     ansible.builtin.shell: "sed -i 's/^\\s*#\\s*UsePAM.*/UsePAM yes/g' /etc/ssh/sshd_config\n
       if ! grep -qi '^UsePAM ' /etc/ssh/sshd_config; then echo 'UsePAM yes' >> /etc/ssh/sshd_config;
       else sed -i 's/^UsePAM.*/UsePAM yes/' /etc/ssh/sshd_config; fi\n"
-    when: audit_5_1_23_0.rc != 0
+    when: (audit_5_1_23_0.rc is defined and audit_5_1_23_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.2 Configure privilege escalation
@@ -529,7 +529,7 @@
     register: rem_5_2_1_0
     changed_when: rem_5_2_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_2_1_0.rc != 0
+    when: (audit_5_2_1_0.rc is defined and audit_5_2_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -550,7 +550,7 @@
     ansible.builtin.shell: "echo \"Defaults use_pty\" > /etc/sudoers.d/use_pty\nsed
       -i 's/!use_pty//g' /etc/sudoers\nfor f in /etc/sudoers.d/*; do if [ -f \"$f\"\
       \ ]; then sed -i 's/!use_pty//g' \"$f\"; fi; done\n"
-    when: audit_5_2_2_0.rc != 0
+    when: (audit_5_2_2_0.rc is defined and audit_5_2_2_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.2.3 Ensure sudo log file exists
@@ -567,7 +567,7 @@
   - name: "5.2.3 Ensure sudo log file exists (Remediation)"
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
     ansible.builtin.shell: "echo 'Defaults logfile=\"/var/log/sudo.log\"' > /etc/sudoers.d/logfile\n"
-    when: audit_5_2_3_0.rc != 0
+    when: (audit_5_2_3_0.rc is defined and audit_5_2_3_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.2.6 Ensure sudo timestamp_timeout is configured
@@ -584,7 +584,7 @@
   - name: "5.2.6 Ensure sudo timestamp_timeout is configured (Remediation)"
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
     ansible.builtin.shell: "echo \"Defaults timestamp_timeout=15\" > /etc/sudoers.d/timeout\n"
-    when: audit_5_2_6_0.rc != 0
+    when: (audit_5_2_6_0.rc is defined and audit_5_2_6_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.2.7 Ensure access to the su command is restricted
@@ -605,7 +605,7 @@
     register: rem_5_2_7_0
     changed_when: rem_5_2_7_0.rc == 0
     ignore_errors: true
-    when: audit_5_2_7_0.rc != 0
+    when: (audit_5_2_7_0.rc is defined and audit_5_2_7_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -656,7 +656,7 @@
     register: rem_5_3_1_1_0
     changed_when: rem_5_3_1_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_1_1_0.rc != 0
+    when: (audit_5_3_1_1_0.rc is defined and audit_5_3_1_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -691,7 +691,7 @@
     register: rem_5_3_2_1_0
     changed_when: rem_5_3_2_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_2_1_0.rc != 0
+    when: (audit_5_3_2_1_0.rc is defined and audit_5_3_2_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -732,7 +732,7 @@
     register: rem_5_3_2_2_0
     changed_when: rem_5_3_2_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_2_2_0.rc != 0
+    when: (audit_5_3_2_2_0.rc is defined and audit_5_3_2_2_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -753,7 +753,7 @@
     register: rem_5_3_2_3_0
     changed_when: rem_5_3_2_3_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_2_3_0.rc != 0
+    when: (audit_5_3_2_3_0.rc is defined and audit_5_3_2_3_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
   - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Remediation - similar output
@@ -766,7 +766,7 @@
     changed_when: rem_5_3_2_3_1.rc == 0
     ignore_errors: true
     when:
-    - audit_5_3_2_3_1.rc != 0
+    - (audit_5_3_2_3_1.rc is defined and audit_5_3_2_3_1.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
   - name: "5.3.2.3 Ensure pam_pwquality module is enabled (Remediation - similar output
@@ -785,7 +785,7 @@
     changed_when: rem_5_3_2_3_2.rc == 0
     ignore_errors: true
     when:
-    - audit_5_3_2_3_2.rc != 0
+    - (audit_5_3_2_3_2.rc is defined and audit_5_3_2_3_2.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -806,7 +806,7 @@
     register: rem_5_3_2_4_0
     changed_when: rem_5_3_2_4_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_2_4_0.rc != 0
+    when: (audit_5_3_2_4_0.rc is defined and audit_5_3_2_4_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
   - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Remediation - similar output
@@ -819,7 +819,7 @@
     changed_when: rem_5_3_2_4_1.rc == 0
     ignore_errors: true
     when:
-    - audit_5_3_2_4_1.rc != 0
+    - (audit_5_3_2_4_1.rc is defined and audit_5_3_2_4_1.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
   - name: "5.3.2.4 Ensure pam_pwhistory module is enabled (Remediation - similar output
@@ -838,7 +838,7 @@
     changed_when: rem_5_3_2_4_2.rc == 0
     ignore_errors: true
     when:
-    - audit_5_3_2_4_2.rc != 0
+    - (audit_5_3_2_4_2.rc is defined and audit_5_3_2_4_2.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -873,7 +873,7 @@
     register: rem_5_3_3_1_0
     changed_when: rem_5_3_3_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_1_0.rc != 0
+    when: (audit_5_3_3_1_0.rc is defined and audit_5_3_3_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -884,7 +884,7 @@
       grep -Pi -- '^\h*deny\h*=\h*[1-5]\b' /etc/security/faillock.conf
     register: audit_5_3_3_1_1_0
     changed_when: false
-    failed_when: audit_5_3_3_1_1_0.rc != 0
+    failed_when: (audit_5_3_3_1_1_0.rc is defined and audit_5_3_3_1_1_0.rc != 0)
     ignore_errors: true
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
@@ -896,7 +896,7 @@
       create: true
     register: rem_5_3_3_1_1_0
     ignore_errors: true
-    when: audit_5_3_3_1_1_0.rc != 0
+    when: (audit_5_3_3_1_1_0.rc is defined and audit_5_3_3_1_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -918,7 +918,7 @@
     register: rem_5_3_3_1_2_0
     changed_when: rem_5_3_3_1_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_1_2_0.rc != 0
+    when: (audit_5_3_3_1_2_0.rc is defined and audit_5_3_3_1_2_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -947,7 +947,7 @@
     register: rem_5_3_3_2_0
     changed_when: rem_5_3_3_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_2_0.rc != 0
+    when: (audit_5_3_3_2_0.rc is defined and audit_5_3_3_2_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -976,7 +976,7 @@
     register: rem_5_3_3_2_2_0
     changed_when: rem_5_3_3_2_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_2_2_0.rc != 0
+    when: (audit_5_3_3_2_2_0.rc is defined and audit_5_3_3_2_2_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1015,7 +1015,7 @@
     register: rem_5_3_3_2_3_0
     changed_when: rem_5_3_3_2_3_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_2_3_0.rc != 0
+    when: (audit_5_3_3_2_3_0.rc is defined and audit_5_3_3_2_3_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -1050,7 +1050,7 @@
     changed_when: rem_5_3_3_3_0.rc == 0
     ignore_errors: true
     when:
-    - audit_5_3_3_3_0.rc != 0
+    - (audit_5_3_3_3_0.rc is defined and audit_5_3_3_3_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -1061,7 +1061,7 @@
       grep -Pi -- '^\h*remember\h*=\h*(2[4-9]|[3-9][0-9]|[1-9][0-9]{2,})\b' /etc/security/pwhistory.conf
     register: audit_5_3_3_3_1_0
     changed_when: false
-    failed_when: audit_5_3_3_3_1_0.rc != 0
+    failed_when: (audit_5_3_3_3_1_0.rc is defined and audit_5_3_3_3_1_0.rc != 0)
     ignore_errors: true
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
@@ -1073,7 +1073,7 @@
       create: true
     register: rem_5_3_3_3_1_0
     ignore_errors: true
-    when: audit_5_3_3_3_1_0.rc != 0
+    when: (audit_5_3_3_3_1_0.rc is defined and audit_5_3_3_3_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1108,7 +1108,7 @@
     register: rem_5_3_3_4_1_0
     changed_when: rem_5_3_3_4_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_4_1_0.rc != 0
+    when: (audit_5_3_3_4_1_0.rc is defined and audit_5_3_3_4_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1131,7 +1131,7 @@
     register: rem_5_3_3_4_4_0
     changed_when: rem_5_3_3_4_4_0.rc == 0
     ignore_errors: true
-    when: audit_5_3_3_4_4_0.rc != 0
+    when: (audit_5_3_3_4_4_0.rc is defined and audit_5_3_3_4_4_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1183,7 +1183,7 @@
     register: rem_5_4_1_1_0
     changed_when: rem_5_4_1_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_1_1_0.rc != 0
+    when: (audit_5_4_1_1_0.rc is defined and audit_5_4_1_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1206,7 +1206,7 @@
     register: rem_5_4_1_2_0
     changed_when: rem_5_4_1_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_1_2_0.rc != 0
+    when: (audit_5_4_1_2_0.rc is defined and audit_5_4_1_2_0.rc != 0)
     tags: ["level_2__server", "level_2__workstation", "cis", "manual"]
 
     # ------------------------------------------------------------
@@ -1231,7 +1231,7 @@
     register: rem_5_4_1_5_0
     changed_when: rem_5_4_1_5_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_1_5_0.rc != 0
+    when: (audit_5_4_1_5_0.rc is defined and audit_5_4_1_5_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1267,7 +1267,7 @@
     register: rem_5_4_2_1_0
     changed_when: rem_5_4_2_1_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_2_1_0.rc != 0
+    when: (audit_5_4_2_1_0.rc is defined and audit_5_4_2_1_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1289,7 +1289,7 @@
     register: rem_5_4_2_2_0
     changed_when: rem_5_4_2_2_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_2_2_0.rc != 0
+    when: (audit_5_4_2_2_0.rc is defined and audit_5_4_2_2_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1310,7 +1310,7 @@
     register: rem_5_4_2_3_0
     changed_when: rem_5_4_2_3_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_2_3_0.rc != 0
+    when: (audit_5_4_2_3_0.rc is defined and audit_5_4_2_3_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1332,7 +1332,7 @@
     register: rem_5_4_2_4_0
     changed_when: rem_5_4_2_4_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_2_4_0.rc != 0
+    when: (audit_5_4_2_4_0.rc is defined and audit_5_4_2_4_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
     # ------------------------------------------------------------
@@ -1382,7 +1382,7 @@
   - name: "5.4.2.5 Ensure root path integrity (Remediation)"
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
     ansible.builtin.shell: "echo 'Manual remediation required for root path integrity'\n"
-    when: audit_5_4_2_5_0.rc != 0
+    when: (audit_5_4_2_5_0.rc is defined and audit_5_4_2_5_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.4.2.6 Ensure root user umask is configured
@@ -1402,7 +1402,7 @@
       027/g' /root/.bashrc; else echo 'umask 027' >> /root/.bashrc; fi\nif [ -f /root/.profile
       ]; then sed -i 's/^umask.*/umask 027/g' /root/.profile; else echo 'umask 027'
       >> /root/.profile; fi\n"
-    when: audit_5_4_2_6_0.rc != 0
+    when: (audit_5_4_2_6_0.rc is defined and audit_5_4_2_6_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.4.3 Configure user default environment
@@ -1433,7 +1433,7 @@
   - name: "5.4.3.1 Ensure nologin is not listed in /etc/shells (Remediation)"
     tags: ["level_2__server", "level_2__workstation", "cis", "automated"]
     ansible.builtin.shell: "sed -i '/\\/nologin/d' /etc/shells\n"
-    when: audit_5_4_3_1_0.rc != 0
+    when: (audit_5_4_3_1_0.rc is defined and audit_5_4_3_1_0.rc != 0)
 
     # ------------------------------------------------------------
     # 5.4.3.3 Ensure default user umask is configured
@@ -1460,7 +1460,7 @@
     register: rem_5_4_3_3_0
     changed_when: rem_5_4_3_3_0.rc == 0
     ignore_errors: true
-    when: audit_5_4_3_3_0.rc != 0
+    when: (audit_5_4_3_3_0.rc is defined and audit_5_4_3_3_0.rc != 0)
     tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
 
   post_tasks:
