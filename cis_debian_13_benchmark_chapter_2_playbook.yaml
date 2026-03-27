@@ -1,0 +1,1562 @@
+---
+- name: "CIS Debian Linux 13 Benchmark Chapter 2 Playbook"
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars_files:
+    - cis_vars.yaml
+
+  vars:
+    host_dest_dir_temp_base: "/tmp/cis_temp_dir"
+    host_dest_file_ssh_config: "/etc/ssh/sshd_config"
+
+  pre_tasks:
+    - name: "Get current timestamp with millisecond precision"
+      ansible.builtin.command: date +%s%3N
+      register: timestamp_ms
+      changed_when: false
+
+    - name: "Gather package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: "Set temporary directory variable with timestamp"
+      ansible.builtin.set_fact:
+        host_dest_dir_temp_cis: "{{ host_dest_dir_temp_base }}_{{ timestamp_ms.stdout }}"
+
+    - name: "Create the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: directory
+        mode: "0700"
+        owner: root
+        group: root
+      register: temp_dir_creation
+      changed_when: temp_dir_creation.changed
+
+  tasks:
+    # ------------------------------------------------------------
+    # 2.1 Configure Server Services
+    # ------------------------------------------------------------
+    - name: "2.1 Configure Server Services (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.1 Configure Server Services (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.1.1 Ensure autofs services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.1 Ensure autofs services are not in use (Audit - Default fallback (not autofs is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s autofs &>/dev/null && echo "autofs is installed"
+      register: audit_2_1_1_0
+      changed_when: false
+      failed_when: audit_2_1_1_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_autofs_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.1 Ensure autofs services are not in use (Audit - autofs is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled autofs.service 2>/dev/null | grep 'enabled'
+        systemctl is-active autofs.service 2>/dev/null | grep '^active'
+      register: audit_2_1_1_1
+      changed_when: false
+      failed_when: audit_2_1_1_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_autofs_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.1 Ensure autofs services are not in use (Remediation - Default fallback (not autofs is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop autofs.service
+        apt-get purge -y autofs
+      register: rem_2_1_1_0
+      changed_when: rem_2_1_1_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_1_0.rc != 0
+        - not (cis_autofs_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.1 Ensure autofs services are not in use (Remediation - autofs is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop autofs.service
+        systemctl mask autofs.service
+      register: rem_2_1_1_1
+      changed_when: rem_2_1_1_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_1_1.rc != 0
+        - cis_autofs_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.2 Ensure avahi daemon services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.2 Ensure avahi daemon services are not in use (Audit - Default fallback (not avahi is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s avahi-daemon &>/dev/null && echo "avahi-daemon is installed"
+      register: audit_2_1_2_0
+      changed_when: false
+      failed_when: audit_2_1_2_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_avahi_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.2 Ensure avahi daemon services are not in use (Audit - avahi is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled avahi-daemon.socket avahi-daemon.service 2>/dev/null | grep 'enabled'
+        systemctl is-active avahi-daemon.socket avahi-daemon.service 2>/dev/null | grep '^active'
+      register: audit_2_1_2_1
+      changed_when: false
+      failed_when: audit_2_1_2_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_avahi_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.2 Ensure avahi daemon services are not in use (Remediation - Default fallback (not avahi is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop avahi-daemon.socket avahi-daemon.service
+        apt-get purge -y avahi-daemon
+      register: rem_2_1_2_0
+      changed_when: rem_2_1_2_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_2_0.rc != 0
+        - not (cis_avahi_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.2 Ensure avahi daemon services are not in use (Remediation - avahi is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop avahi-daemon.socket avahi-daemon.service
+        systemctl mask avahi-daemon.socket avahi-daemon.service
+      register: rem_2_1_2_1
+      changed_when: rem_2_1_2_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_2_1.rc != 0
+        - cis_avahi_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.3 Ensure dhcp server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.3 Ensure dhcp server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -l | awk '{print $2}' | grep -Pio -- 'kea' &>/dev/null && echo "kea is installed"
+      register: audit_2_1_3_0
+      changed_when: false
+      failed_when: audit_2_1_3_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_dhcp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.3 Ensure dhcp server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl show kea-dhcp-ddns-server.service kea-dhcp4-server.service kea-dhcp6-server.service -p UnitFileState,ActiveState | grep -Pi '=(enabled|active)'
+      register: audit_2_1_3_1
+      changed_when: false
+      failed_when: audit_2_1_3_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_dhcp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.3 Ensure dhcp server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop kea-dhcp-ddns-server.service kea-dhcp4-server.service kea-dhcp6-server.service
+        apt-get remove -y kea
+      register: rem_2_1_3_0
+      changed_when: rem_2_1_3_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_3_0.rc != 0
+        - not (cis_dhcp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.3 Ensure dhcp server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop kea-dhcp-ddns-server.service kea-dhcp4-server.service kea-dhcp6-server.service
+        systemctl mask kea-dhcp-ddns-server.service kea-dhcp4-server.service kea-dhcp6-server.service
+      register: rem_2_1_3_1
+      changed_when: rem_2_1_3_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_3_1.rc != 0
+        - cis_dhcp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.4 Ensure dns server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.4 Ensure dns server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s bind9 &>/dev/null && echo "bind9 is installed"
+      register: audit_2_1_4_0
+      changed_when: false
+      failed_when: audit_2_1_4_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_dns_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.4 Ensure dns server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled named.service 2>/dev/null | grep 'enabled'
+        systemctl is-active named.service 2>/dev/null | grep '^active'
+      register: audit_2_1_4_1
+      changed_when: false
+      failed_when: audit_2_1_4_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_dns_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.4 Ensure dns server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop named.service
+        apt-get purge -y bind9
+      register: rem_2_1_4_0
+      changed_when: rem_2_1_4_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_4_0.rc != 0
+        - not (cis_dns_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.4 Ensure dns server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop named.service
+        systemctl mask named.service
+      register: rem_2_1_4_1
+      changed_when: rem_2_1_4_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_4_1.rc != 0
+        - cis_dns_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.5 Ensure dnsmasq services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.5 Ensure dnsmasq services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s dnsmasq &>/dev/null && echo "dnsmasq is installed"
+      register: audit_2_1_5_0
+      changed_when: false
+      failed_when: audit_2_1_5_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_dnsmasq_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.5 Ensure dnsmasq services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled dnsmasq.service 2>/dev/null | grep 'enabled'
+        systemctl is-active dnsmasq.service 2>/dev/null | grep '^active'
+      register: audit_2_1_5_1
+      changed_when: false
+      failed_when: audit_2_1_5_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_dnsmasq_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.5 Ensure dnsmasq services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop dnsmasq.service
+        apt-get purge -y dnsmasq
+      register: rem_2_1_5_0
+      changed_when: rem_2_1_5_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_5_0.rc != 0
+        - not (cis_dnsmasq_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.5 Ensure dnsmasq services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop dnsmasq.service
+        systemctl mask dnsmasq.service
+      register: rem_2_1_5_1
+      changed_when: rem_2_1_5_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_5_1.rc != 0
+        - cis_dnsmasq_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.6 Ensure ftp server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.6 Ensure ftp server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s vsftpd &>/dev/null && echo "vsftpd is installed"
+      register: audit_2_1_6_0
+      changed_when: false
+      failed_when: audit_2_1_6_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_ftp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.6 Ensure ftp server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled vsftpd.service 2>/dev/null | grep 'enabled'
+        systemctl is-active vsftpd.service 2>/dev/null | grep '^active'
+      register: audit_2_1_6_1
+      changed_when: false
+      failed_when: audit_2_1_6_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_ftp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.6 Ensure ftp server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop vsftpd.service
+        apt-get purge -y vsftpd
+      register: rem_2_1_6_0
+      changed_when: rem_2_1_6_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_6_0.rc != 0
+        - not (cis_ftp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.6 Ensure ftp server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop vsftpd.service
+        systemctl mask vsftpd.service
+      register: rem_2_1_6_1
+      changed_when: rem_2_1_6_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_6_1.rc != 0
+        - cis_ftp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.7 Ensure ldap server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.7 Ensure ldap server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s slapd &>/dev/null && echo "slapd is installed"
+      register: audit_2_1_7_0
+      changed_when: false
+      failed_when: audit_2_1_7_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_ldap_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.7 Ensure ldap server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled slapd.service 2>/dev/null | grep 'enabled'
+        systemctl is-active slapd.service 2>/dev/null | grep '^active'
+      register: audit_2_1_7_1
+      changed_when: false
+      failed_when: audit_2_1_7_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_ldap_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.7 Ensure ldap server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop slapd.service
+        apt-get purge -y slapd
+      register: rem_2_1_7_0
+      changed_when: rem_2_1_7_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_7_0.rc != 0
+        - not (cis_ldap_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.7 Ensure ldap server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop slapd.service
+        systemctl mask slapd.service
+      register: rem_2_1_7_1
+      changed_when: rem_2_1_7_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_7_1.rc != 0
+        - cis_ldap_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.10 Ensure nis server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.10 Ensure nis server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s ypserv &>/dev/null && echo "ypserv is installed"
+      register: audit_2_1_10_0
+      changed_when: false
+      failed_when: audit_2_1_10_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_nis_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.10 Ensure nis server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled ypserv.service 2>/dev/null | grep 'enabled'
+        systemctl is-active ypserv.service 2>/dev/null | grep '^active'
+      register: audit_2_1_10_1
+      changed_when: false
+      failed_when: audit_2_1_10_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_nis_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.10 Ensure nis server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop ypserv.service
+        apt-get purge -y ypserv
+      register: rem_2_1_10_0
+      changed_when: rem_2_1_10_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_10_0.rc != 0
+        - not (cis_nis_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.10 Ensure nis server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop ypserv.service
+        systemctl mask ypserv.service
+      register: rem_2_1_10_1
+      changed_when: rem_2_1_10_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_10_1.rc != 0
+        - cis_nis_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.11 Ensure print server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.11 Ensure print server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s cups &>/dev/null && echo "cups is installed"
+      register: audit_2_1_11_0
+      changed_when: false
+      failed_when: audit_2_1_11_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_print_dependency_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.11 Ensure print server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled cups.socket cups.service 2>/dev/null | grep 'enabled'
+        systemctl is-active cups.socket cups.service 2>/dev/null | grep '^active'
+      register: audit_2_1_11_1
+      changed_when: false
+      failed_when: audit_2_1_11_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_print_dependency_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.11 Ensure print server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop cups.socket cups.service
+        apt-get purge -y cups
+      register: rem_2_1_11_0
+      changed_when: rem_2_1_11_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_11_0.rc != 0
+        - not (cis_print_dependency_required | default(false))
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    - name: "2.1.11 Ensure print server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop cups.socket cups.service
+        systemctl mask cups.socket cups.service
+      register: rem_2_1_11_1
+      changed_when: rem_2_1_11_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_11_1.rc != 0
+        - cis_print_dependency_required | default(false)
+      tags: ["level_1__server", "level_2__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.12 Ensure rpcbind services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.12 Ensure rpcbind services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s rpcbind &>/dev/null && echo "rpcbind is installed"
+      register: audit_2_1_12_0
+      changed_when: false
+      failed_when: audit_2_1_12_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_rpcbind_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.12 Ensure rpcbind services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled rpcbind.socket rpcbind.service 2>/dev/null | grep 'enabled'
+        systemctl is-active rpcbind.socket rpcbind.service 2>/dev/null | grep '^active'
+      register: audit_2_1_12_1
+      changed_when: false
+      failed_when: audit_2_1_12_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_rpcbind_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.12 Ensure rpcbind services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop rpcbind.socket rpcbind.service
+        apt-get purge -y rpcbind
+      register: rem_2_1_12_0
+      changed_when: rem_2_1_12_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_12_0.rc != 0
+        - not (cis_rpcbind_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.12 Ensure rpcbind services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop rpcbind.socket rpcbind.service
+        systemctl mask rpcbind.socket rpcbind.service
+      register: rem_2_1_12_1
+      changed_when: rem_2_1_12_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_12_1.rc != 0
+        - cis_rpcbind_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.13 Ensure rsync services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.13 Ensure rsync services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s rsync &>/dev/null && echo "rsync is installed"
+      register: audit_2_1_13_0
+      changed_when: false
+      failed_when: audit_2_1_13_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_rsync_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.13 Ensure rsync services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled rsync.service 2>/dev/null | grep 'enabled'
+        systemctl is-active rsync.service 2>/dev/null | grep '^active'
+      register: audit_2_1_13_1
+      changed_when: false
+      failed_when: audit_2_1_13_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_rsync_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.13 Ensure rsync services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop rsync.service
+        apt-get purge -y rsync
+      register: rem_2_1_13_0
+      changed_when: rem_2_1_13_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_13_0.rc != 0
+        - not (cis_rsync_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.13 Ensure rsync services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop rsync.service
+        systemctl mask rsync.service
+      register: rem_2_1_13_1
+      changed_when: rem_2_1_13_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_13_1.rc != 0
+        - cis_rsync_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.15 Ensure snmp services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.15 Ensure snmp services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s snmpd &>/dev/null && echo "snmpd is installed"
+      register: audit_2_1_15_0
+      changed_when: false
+      failed_when: audit_2_1_15_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_snmp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.15 Ensure snmp services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled snmpd.service 2>/dev/null | grep 'enabled'
+        systemctl is-active snmpd.service 2>/dev/null | grep '^active'
+      register: audit_2_1_15_1
+      changed_when: false
+      failed_when: audit_2_1_15_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_snmp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.15 Ensure snmp services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop snmpd.service
+        apt-get purge -y snmpd
+      register: rem_2_1_15_0
+      changed_when: rem_2_1_15_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_15_0.rc != 0
+        - not (cis_snmp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.15 Ensure snmp services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop snmpd.service
+        systemctl mask snmpd.service
+      register: rem_2_1_15_1
+      changed_when: rem_2_1_15_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_15_1.rc != 0
+        - cis_snmp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.16 Ensure telnet-server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.16 Ensure telnet-server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -l | awk '{print $2}' | grep -Pio -- '^telnetd|^telnetd-ssl' &>/dev/null && echo "telnetd is installed"
+      register: audit_2_1_16_0
+      changed_when: false
+      failed_when: audit_2_1_16_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_telnet_server_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.16 Ensure telnet-server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled inetutils-inetd.service 2>/dev/null | grep 'enabled'
+        systemctl is-active inetutils-inetd.service 2>/dev/null | grep '^active'
+      register: audit_2_1_16_1
+      changed_when: false
+      failed_when: audit_2_1_16_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_telnet_server_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.16 Ensure telnet-server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop inetutils-inetd.service
+        apt-get purge -y telnetd
+      register: rem_2_1_16_0
+      changed_when: rem_2_1_16_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_16_0.rc != 0
+        - not (cis_telnet_server_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.16 Ensure telnet-server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop inetutils-inetd.service
+        systemctl mask inetutils-inetd.service
+      register: rem_2_1_16_1
+      changed_when: rem_2_1_16_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_16_1.rc != 0
+        - cis_telnet_server_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.17 Ensure tftp server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.17 Ensure tftp server services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s tftpd-hpa &>/dev/null && echo "tftpd-hpa is installed"
+      register: audit_2_1_17_0
+      changed_when: false
+      failed_when: audit_2_1_17_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_tftp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.17 Ensure tftp server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled tftpd-hpa.service 2>/dev/null | grep 'enabled'
+        systemctl is-active tftpd-hpa.service 2>/dev/null | grep '^active'
+      register: audit_2_1_17_1
+      changed_when: false
+      failed_when: audit_2_1_17_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_tftp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.17 Ensure tftp server services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop tftpd-hpa.service
+        apt-get purge -y tftpd-hpa
+      register: rem_2_1_17_0
+      changed_when: rem_2_1_17_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_17_0.rc != 0
+        - not (cis_tftp_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.17 Ensure tftp server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop tftpd-hpa.service
+        systemctl mask tftpd-hpa.service
+      register: rem_2_1_17_1
+      changed_when: rem_2_1_17_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_17_1.rc != 0
+        - cis_tftp_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.19 Ensure web server services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.19 Ensure web server services are not in use (Audit - Default)"
+      ansible.builtin.shell: |
+        dpkg-query -s apache2 &>/dev/null && echo "apache2 is installed"
+        dpkg-query -s nginx &>/dev/null && echo "nginx is installed"
+      register: audit_2_1_19_0
+      changed_when: false
+      failed_when: audit_2_1_19_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.19 Ensure web server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl show apache2.socket apache2.service -p UnitFileState,ActiveState | grep -Pi '=(enabled|active)'
+      register: audit_2_1_19_1
+      changed_when: false
+      failed_when: audit_2_1_19_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_web_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.19 Ensure web server services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl show nginx.service -p UnitFileState,ActiveState | grep -Pi '=(enabled|active)'
+      register: audit_2_1_19_2
+      changed_when: false
+      failed_when: audit_2_1_19_2.stdout | length > 0
+      ignore_errors: true
+      when: cis_web_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.19 Ensure web server services are not in use (Remediation - Default)"
+      ansible.builtin.shell: |
+        systemctl stop apache2.socket apache2.service
+        apt-get purge -y apache2
+        systemctl stop nginx.service
+        apt-get purge -y nginx
+      register: rem_2_1_19_0
+      changed_when: rem_2_1_19_0.rc == 0
+      ignore_errors: true
+      when: audit_2_1_19_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.19 Ensure web server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop apache2.socket apache2.service
+        systemctl mask apache2.socket apache2.service
+      register: rem_2_1_19_1
+      changed_when: rem_2_1_19_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_19_1.rc != 0
+        - cis_web_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.19 Ensure web server services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop nginx.service
+        systemctl mask nginx.service
+      register: rem_2_1_19_2
+      changed_when: rem_2_1_19_2.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_19_2.rc != 0
+        - cis_web_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.1.20 Ensure xinetd services are not in use
+    # ------------------------------------------------------------
+    - name: "2.1.20 Ensure xinetd services are not in use (Audit - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        dpkg-query -s xinetd &>/dev/null && echo "xinetd is installed"
+      register: audit_2_1_20_0
+      changed_when: false
+      failed_when: audit_2_1_20_0.stdout | length > 0
+      ignore_errors: true
+      when: not (cis_xinetd_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.20 Ensure xinetd services are not in use (Audit - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl is-enabled xinetd.service 2>/dev/null | grep 'enabled'
+        systemctl is-active xinetd.service 2>/dev/null | grep '^active'
+      register: audit_2_1_20_1
+      changed_when: false
+      failed_when: audit_2_1_20_1.stdout | length > 0
+      ignore_errors: true
+      when: cis_xinetd_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.20 Ensure xinetd services are not in use (Remediation - Default fallback (not package is required as dependency))"
+      ansible.builtin.shell: |
+        systemctl stop xinetd.service
+        apt-get purge -y xinetd
+      register: rem_2_1_20_0
+      changed_when: rem_2_1_20_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_20_0.rc != 0
+        - not (cis_xinetd_dependency_required | default(false))
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.1.20 Ensure xinetd services are not in use (Remediation - package is required as dependency)"
+      ansible.builtin.shell: |
+        systemctl stop xinetd.service
+        systemctl mask xinetd.service
+      register: rem_2_1_20_1
+      changed_when: rem_2_1_20_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_1_20_1.rc != 0
+        - cis_xinetd_dependency_required | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2 Configure Client Services
+    # ------------------------------------------------------------
+    - name: "2.2 Configure Client Services (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.2 Configure Client Services (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.2.1 Ensure nis client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.1 Ensure nis client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s nis &>/dev/null && echo "nis is installed"
+      register: audit_2_2_1_0
+      changed_when: false
+      failed_when: audit_2_2_1_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.1 Ensure nis client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y nis
+      register: rem_2_2_1_0
+      changed_when: rem_2_2_1_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2.2 Ensure rsh client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.2 Ensure rsh client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s rsh-client &>/dev/null && echo "rsh-client is installed"
+      register: audit_2_2_2_0
+      changed_when: false
+      failed_when: audit_2_2_2_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.2 Ensure rsh client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y rsh-client
+      register: rem_2_2_2_0
+      changed_when: rem_2_2_2_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_2_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2.3 Ensure talk client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.3 Ensure talk client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s talk &>/dev/null && echo "talk is installed"
+      register: audit_2_2_3_0
+      changed_when: false
+      failed_when: audit_2_2_3_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.3 Ensure talk client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y talk
+      register: rem_2_2_3_0
+      changed_when: rem_2_2_3_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_3_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2.4 Ensure telnet client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.4 Ensure telnet client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -l | grep -E 'telnet|inetutils-telnet' &>/dev/null && echo "telnet is installed"
+      register: audit_2_2_4_0
+      changed_when: false
+      failed_when: audit_2_2_4_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.4 Ensure telnet client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y telnet
+        apt-get purge -y inetutils-telnet
+      register: rem_2_2_4_0
+      changed_when: rem_2_2_4_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_4_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2.5 Ensure ldap client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.5 Ensure ldap client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -s ldap-utils &>/dev/null && echo "ldap-utils is installed"
+      register: audit_2_2_5_0
+      changed_when: false
+      failed_when: audit_2_2_5_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.5 Ensure ldap client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y ldap-utils
+      register: rem_2_2_5_0
+      changed_when: rem_2_2_5_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_5_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.2.6 Ensure ftp client is not installed
+    # ------------------------------------------------------------
+    - name: "2.2.6 Ensure ftp client is not installed (Audit)"
+      ansible.builtin.shell: |
+        dpkg-query -l | awk '{print $2}' 2>&1 | grep -Pqs -- '^(ftp|tnftp)' && echo "ftp is installed"
+      register: audit_2_2_6_0
+      changed_when: false
+      failed_when: audit_2_2_6_0.stdout | length > 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.2.6 Ensure ftp client is not installed (Remediation)"
+      ansible.builtin.shell: |
+        apt-get purge -y ftp
+        apt-get purge -y tnftp
+      register: rem_2_2_6_0
+      changed_when: rem_2_2_6_0.rc == 0
+      ignore_errors: true
+      when: audit_2_2_6_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.3 Configure Time Synchronization
+    # ------------------------------------------------------------
+    - name: "2.3 Configure Time Synchronization (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.3 Configure Time Synchronization (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.3.1 Ensure time synchronization is in use
+    # ------------------------------------------------------------
+    - name: "2.3.1 Ensure time synchronization is in use (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+        l_output="" l_output2=""
+        service_not_enabled_chk()
+        {
+        l_out2=""
+        if systemctl is-enabled "$l_service_name" 2>/dev/null | grep -q 'enabled'; then
+        l_out2="$l_out2\n - Daemon: \"$l_service_name\" is enabled on the system"
+        fi
+        if systemctl is-active "$l_service_name" 2>/dev/null | grep -q '^active'; then
+        l_out2="$l_out2\n - Daemon: \"$l_service_name\" is active on the system"
+        fi
+        }
+        l_service_name="systemd-timesyncd.service"
+        service_not_enabled_chk
+        if [ -n "$l_out2" ]; then
+        l_timesyncd="y"; l_out_tsd="$l_out2"
+        else
+        l_timesyncd="n"; l_out_tsd="\n - Daemon: \"$l_service_name\" is not enabled and not active on the system"
+        fi
+        l_service_name="chrony.service"
+        service_not_enabled_chk
+        if [ -n "$l_out2" ]; then
+        l_chrony="y"; l_out_chrony="$l_out2"
+        else
+        l_chrony="n"; l_out_chrony="\n - Daemon: \"$l_service_name\" is not enabled and not active on the system"
+        fi
+        l_status="$l_timesyncd$l_chrony"
+        case "$l_status" in
+        yy) l_output2=" - More than one time sync daemon is in use on the system$l_out_tsd$l_out_chrony" ;;
+        nn) l_output2=" - No time sync daemon is in use on the system$l_out_tsd$l_out_chrony" ;;
+        yn|ny) l_output=" - Only one time sync daemon is in use on the system$l_out_tsd$l_out_chrony" ;;
+        *) l_output2=" - Unable to determine time sync daemon(s) status" ;;
+        esac
+        if [ -z "$l_output2" ]; then
+        echo -e "\n- Audit Result:\n ** PASS **\n$l_output\n"
+        else
+        echo -e "\n- Audit Result:\n ** FAIL **\n - * Reasons for audit failure * :\n$l_output2\n"
+        fi
+        }
+      register: audit_2_3_1_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_2_3_1_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "2.3.1 Ensure time synchronization is in use (Remediation - timesyncd)"
+      ansible.builtin.shell: |
+        apt-get purge -y chrony
+        apt-get autoremove -y chrony
+        systemctl unmask systemd-timesyncd.service
+        systemctl enable --now systemd-timesyncd.service
+      register: rem_2_3_1_0_timesyncd
+      changed_when: rem_2_3_1_0_timesyncd.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_3_1_0.rc != 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'systemd-timesyncd'
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "2.3.1 Ensure time synchronization is in use (Remediation - chrony)"
+      ansible.builtin.shell: |
+        apt-get install -y chrony
+        systemctl stop systemd-timesyncd.service
+        systemctl mask systemd-timesyncd.service
+        systemctl unmask chrony.service
+        systemctl enable --now chrony.service
+      register: rem_2_3_1_0_chrony
+      changed_when: rem_2_3_1_0_chrony.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_3_1_0.rc != 0
+        - cis_time_synchronization_daemon | default('systemd-timesyncd') == 'chrony'
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.3.1.1 Ensure a single time synchronization daemon is in use
+    # ------------------------------------------------------------
+    - name: "2.3.1.1 Ensure a single time synchronization daemon is in use (Audit)"
+      ansible.builtin.shell: |-
+        if dpkg-query -W -f='${Status}' chrony 2>/dev/null | grep -q "install ok installed" && dpkg-query -W -f='${Status}' systemd-timesyncd 2>/dev/null | grep -q "install ok installed"; then exit 1; fi; exit 0
+      register: audit_2_3_1_1_0
+      changed_when: false
+      failed_when: audit_2_3_1_1_0.rc != 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.3.1.1 Ensure a single time synchronization daemon is in use (Remediation)"
+      ansible.builtin.shell: |-
+        apt-get purge -y systemd-timesyncd
+      register: rem_2_3_1_1_0
+      changed_when: rem_2_3_1_1_0.rc == 0
+      ignore_errors: true
+      when: audit_2_3_1_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.3.2 Configure systemd-timesyncd
+    # ------------------------------------------------------------
+    - name: "2.3.2 Configure systemd-timesyncd (Audit)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+        a_output=() a_output2=() a_output3=() a_out=() a_out2=() a_parlist=("NTP=[^#\n\r]+"
+        "FallbackNTP=[^#\n\r]+")
+        l_analyze_cmd="$(readlink -f /bin/systemd-analyze)"
+        l_systemd_config_file="/etc/systemd/timesyncd.conf"
+        f_config_file_parameter_chk()
+        {
+        l_used_parameter_setting=""
+        while IFS= read -r l_file; do
+        l_file="$(tr -d '# ' <<< "$l_file")"
+        l_used_parameter_setting="$(grep -PHs -- '^\h*'"$l_parameter_name"'\b' "$l_file" |
+        tail -n 1)"
+        [ -n "$l_used_parameter_setting" ] && break
+        done < <($l_analyze_cmd cat-config "$l_systemd_config_file" | tac | grep -Pio
+        '^\h*#\h*\/[^#\n\r\h]+\.conf\b')
+        if [ -n "$l_used_parameter_setting" ]; then
+        while IFS=: read -r l_file_name l_file_parameter; do
+        while IFS="=" read -r l_file_parameter_name l_file_parameter_value; do
+        if grep -Pq -- "$l_parameter_value" <<< "$l_file_parameter_value"; then
+        a_out+=(" - Parameter: \"${l_file_parameter_name// /}\"" \
+        "
+        correctly set to: \"${l_file_parameter_value// /}\"" \
+        "
+        in the file: \"$l_file_name\"")
+        else
+        a_out2+=(" - Parameter: \"${l_file_parameter_name// /}\"" \
+        "
+        incorrectly set to: \"${l_file_parameter_value// /}\"" \
+        "
+        in the file: \"$l_file_name\"" \
+        "
+        Should be set to: \"$l_value_out\"")
+        fi
+        done <<< "$l_file_parameter"
+        done <<< "$l_used_parameter_setting"
+        else
+        a_out2+=(" - Parameter: \"$l_parameter_name\" is not set in an included file" \
+        "
+        *** Note: \"$l_parameter_name\" May be set in a file that's ignored by load
+        procedure ***")
+        fi
+        }
+      register: audit_2_3_2_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_2_3_2_0.stdout"
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "2.3.2 Configure systemd-timesyncd (Remediation)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+        a_settings=("NTP=time.nist.gov" "FallbackNTP=time-a-g.nist.gov time-bg.nist.gov time-c-g.nist.gov")
+        [ ! -d /etc/systemd/timesyncd.conf.d/ ] && mkdir
+        /etc/systemd/timesyncd.conf.d/
+        if grep -Psq -- '^\h*\[Time\]' /etc/systemd/timesyncd.conf.d/60timesyncd.conf; then
+        printf '%s\n' "" "${a_settings[@]}" >>
+        /etc/systemd/timesyncd.conf.d/60-timesyncd.conf
+        else
+        printf '%s\n' "" "[Time]" "${a_settings[@]}" >>
+        /etc/systemd/timesyncd.conf.d/60-timesyncd.conf
+        fi
+        }
+        systemctl reload-or-restart systemd-timesyncd
+      register: rem_2_3_2_0
+      changed_when: rem_2_3_2_0.rc == 0
+      ignore_errors: true
+      when: audit_2_3_2_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.3.3 Configure chrony
+    # ------------------------------------------------------------
+    - name: "2.3.3 Configure chrony (Audit - chrony is in use on the system, run the following script to ensure chrony is)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          a_output=() a_output2=() a_config_files=("/etc/chrony/chrony.conf")
+          l_include='(confdir|sourcedir)' l_parameter_name='(server|pool)'
+          l_parameter_value='.+'
+          while IFS= read -r l_conf_loc; do
+            l_dir="" l_ext=""
+            if [ -d "$l_conf_loc" ]; then
+              l_dir="$l_conf_loc" l_ext="*"
+            elif
+              grep -Psq '\/\*\.([^#/\n\r]+)?\h*$' <<<"$l_conf_loc" || [ -f
+              "$(readlink -f "$l_conf_loc")" ]
+            then
+              l_dir="$(dirname "$l_conf_loc")" l_ext="$(basename "$l_conf_loc")"
+            fi
+            if [[ -n $l_dir && -n $l_ext ]]; then
+              while IFS= read -r -d $'\0' l_file_name; do
+                [ -f "$(readlink -f "$l_file_name")" ] &&
+                  a_config_files+=("$(readlink -f "$l_file_name")")
+              done < <(
+                find -L "$l_dir" -type f -name "$l_ext" -print0
+                2>/dev/null
+              )
+            fi
+          done < <(
+            awk '$1~/^\s*'"$l_include"'$/{print $2}' "${a_config_files[*]}"
+            2>/dev/null
+          )
+          for l_file in "${a_config_files[@]}"; do
+            l_parameter_line="$(
+              grep -Psi
+              '^\h*'"$l_parameter_name"'(\h+|\h*:\h*)'"$l_parameter_value"'\b' "$l_file"
+            )"
+            [ -n "$l_parameter_line" ] && a_output+=(" - Parameter: \"$(
+              tr -d '()'
+              <<<${l_parameter_name//|/ or }
+            )\""
+            "
+        Exists in the file: \"$l_file\" as:" "$l_parameter_line")
+          done
+          [ "${#a_output[@]}" -le "0" ] && a_output2+=(" - Parameter: \"$(
+            tr -d
+            '()' <<<${l_parameter_name//|/ or }
+          )\""
+          "
+        Does not exist in the chrony configuration")
+          if [ "${#a_output2[@]}" -le 0 ]; then
+            printf '%s\n' "" "- Audit Result:" " ** PASS **" "${a_output[@]}" ""
+          else
+            printf '%s\n' "" "- Audit Result:" " ** FAIL **" " - Reason(s) for
+        audit failure:" "${a_output2[@]}"
+          fi
+        }
+      register: audit_2_3_3_0
+      changed_when: false
+      failed_when: "'** PASS **' not in audit_2_3_3_0.stdout"
+      ignore_errors: true
+      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    - name: "2.3.3 Configure chrony (Remediation)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          [ ! -d "/etc/chrony/sources.d/" ] && mkdir /etc/chrony/sources.d/
+          printf '%s\n' "" "#The maxsources option is unique to the pool directive" \
+          "pool time.nist.gov iburst maxsources 4" >>/etc/chrony/sources.d/60sources.sources
+          chronyc reload sources &>/dev/null
+        }
+        #!/usr/bin/env bash
+        {
+          [ ! -d "/etc/chrony/sources.d/" ] && mkdir /etc/chrony/sources.d/
+          printf '%s\n' "" "server time-a-g.nist.gov iburst" "server 132.163.97.3
+        iburst" \
+            "server time-d-b.nist.gov iburst" >>/etc/chrony/sources.d/60sources.sources
+          chronyc reload sources &>/dev/null
+        }
+        systemctl reload-or-restart chronyd
+      register: rem_2_3_3_0
+      changed_when: rem_2_3_3_0.rc == 0
+      ignore_errors: true
+      when: audit_2_3_3_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.3.3.1 Ensure chrony is configured with authorized timeserver
+    # ------------------------------------------------------------
+    - name: "2.3.3.1 Ensure chrony is configured with authorized timeserver (Audit)"
+      ansible.builtin.shell: |-
+        grep -E "^(server|pool)" /etc/chrony/chrony.conf /etc/chrony/conf.d/*.conf 2>/dev/null || true
+      register: audit_2_3_3_1_0
+      changed_when: false
+      failed_when: audit_2_3_3_1_0.stdout | length == 0
+      ignore_errors: true
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.3.3.1 Ensure chrony is configured with authorized timeserver (Remediation)"
+      ansible.builtin.lineinfile:
+        path: /etc/chrony/chrony.conf
+        line: "pool pool.ntp.org iburst"
+        create: yes
+      register: rem_2_3_3_1_0
+      ignore_errors: true
+      when: audit_2_3_3_1_0.stdout | length == 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.3.3.2 Ensure chrony is running as user _chrony
+    # ------------------------------------------------------------
+    - name: "2.3.3.2 Ensure chrony is running as user _chrony (Audit - chrony is in use on the system, run the following command to verify the chronyd)"
+      ansible.builtin.shell: |
+        ps -ef | awk '(/[c]hronyd/ && $1!="_chrony") { print $1 }'
+      register: audit_2_3_3_2_0
+      changed_when: false
+      failed_when: audit_2_3_3_2_0.stdout | length > 0
+      ignore_errors: true
+      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.3.3.2 Ensure chrony is running as user _chrony (Remediation)"
+      ansible.builtin.shell: |
+        if ! grep -q '^user _chrony' /etc/chrony/chrony.conf; then
+          printf '%s\n' "user _chrony" >> /etc/chrony/chrony.conf
+          systemctl reload-or-restart chronyd
+        fi
+      register: rem_2_3_3_2_0
+      changed_when: rem_2_3_3_2_0.rc == 0
+      ignore_errors: true
+      when: audit_2_3_3_2_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.3.3.3 Ensure chrony is enabled and running
+    # ------------------------------------------------------------
+    - name: "2.3.3.3 Ensure chrony is enabled and running (Audit - chrony is in use on the system, run the following commands)"
+      ansible.builtin.shell: |
+        systemctl is-enabled chrony.service
+        systemctl is-active chrony.service
+      register: audit_2_3_3_3_0
+      changed_when: false
+      failed_when: "'enabled' not in audit_2_3_3_3_0.stdout or 'active' not in audit_2_3_3_3_0.stdout"
+      ignore_errors: true
+      when: cis_condition_chrony_is_in_use_on_the_system__run_the_following_ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.3.3.3 Ensure chrony is enabled and running (Remediation - chrony is in use on the system, run the following commands)"
+      ansible.builtin.shell: |
+        systemctl unmask chrony.service
+        systemctl --now enable chrony.service
+      register: rem_2_3_3_3_0
+      changed_when: rem_2_3_3_3_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_3_3_3_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4 Job Schedulers
+    # ------------------------------------------------------------
+    - name: "2.4 Job Schedulers (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.4 Job Schedulers (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.4.1 Configure cron
+    # ------------------------------------------------------------
+    - name: "2.4.1 Configure cron (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.4.1 Configure cron (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.4.1.1 Ensure cron daemon is enabled and active
+    # ------------------------------------------------------------
+    - name: "2.4.1.1 Ensure cron daemon is enabled and active (Audit - cron is installed on the system)"
+      ansible.builtin.shell: |
+        systemctl list-unit-files | awk '$1~/^crond?\.service/{print $2}'
+        systemctl list-units | awk '$1~/^crond?\.service/{print $3}'
+      register: audit_2_4_1_1_0
+      changed_when: false
+      failed_when: "'enabled' not in audit_2_4_1_1_0.stdout or 'active' not in audit_2_4_1_1_0.stdout"
+      ignore_errors: true
+      when: cis_condition_cron_is_installed_on_the_system_ensure_cron_daemon | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.1 Ensure cron daemon is enabled and active (Remediation - cron is installed on the system)"
+      ansible.builtin.shell: |
+        systemctl unmask "$(systemctl list-unit-files | awk '$1~/^crond?\.service/{print $1}')"
+        systemctl --now enable "$(systemctl list-unit-files | awk '$1~/^crond?\.service/{print $1}')"
+      register: rem_2_4_1_1_0
+      changed_when: rem_2_4_1_1_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4.1.2 Ensure access to /etc/crontab is configured
+    # ------------------------------------------------------------
+    - name: "2.4.1.2 Ensure access to /etc/crontab is configured (Audit - cron is installed on the system)"
+      ansible.builtin.shell: |
+        stat -Lc 'Access: (%a/%A) Uid: ( %u/ %U) Gid: ( %g/ %G)' /etc/crontab
+      register: audit_2_4_1_2_0
+      changed_when: false
+      failed_when: "'Access: (600/-rw-------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_2_0.stdout"
+      ignore_errors: true
+      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.2 Ensure access to /etc/crontab is configured (Remediation - cron is installed on the system)"
+      ansible.builtin.shell: |
+        chown root:root /etc/crontab
+        chmod og-rwx /etc/crontab
+      register: rem_2_4_1_2_0
+      changed_when: rem_2_4_1_2_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_2_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4.1.4 Ensure access to /etc/cron.daily is configured
+    # ------------------------------------------------------------
+    - name: "2.4.1.4 Ensure access to /etc/cron.daily is configured (Audit - cron is installed on the system)"
+      ansible.builtin.shell: |
+        stat -Lc 'Access: (%a/%A) Uid: ( %u/ %U) Gid: ( %g/ %G)' /etc/cron.daily/
+      register: audit_2_4_1_4_0
+      changed_when: false
+      failed_when: "'Access: (700/drwx------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_4_0.stdout"
+      ignore_errors: true
+      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.4 Ensure access to /etc/cron.daily is configured (Remediation - cron is installed on the system)"
+      ansible.builtin.shell: |
+        chown root:root /etc/cron.daily/
+        chmod og-rwx /etc/cron.daily/
+      register: rem_2_4_1_4_0
+      changed_when: rem_2_4_1_4_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_4_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4.1.8 Ensure access to /etc/cron.d is configured
+    # ------------------------------------------------------------
+    - name: "2.4.1.8 Ensure access to /etc/cron.d is configured (Audit - cron is installed on the system)"
+      ansible.builtin.shell: |
+        stat -Lc 'Access: (%a/%A) Uid: ( %u/ %U) Gid: ( %g/ %G)' /etc/cron.d/
+      register: audit_2_4_1_8_0
+      changed_when: false
+      failed_when: "'Access: (700/drwx------) Uid: ( 0/ root) Gid: ( 0/ root)' not in audit_2_4_1_8_0.stdout"
+      ignore_errors: true
+      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to__ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.8 Ensure access to /etc/cron.d is configured (Remediation - cron is installed on the system)"
+      ansible.builtin.shell: |
+        chown root:root /etc/cron.d/
+        chmod og-rwx /etc/cron.d/
+      register: rem_2_4_1_8_0
+      changed_when: rem_2_4_1_8_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_8_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4.1.9 Ensure access to crontab is configured
+    # ------------------------------------------------------------
+    - name: "2.4.1.9 Ensure access to crontab is configured (Audit - cron is installed on the system)"
+      ansible.builtin.shell: |
+        stat -Lc 'Access: (%a/%A) Owner: (%U) Group: (%G)' /etc/cron.allow
+        [ -e "/etc/cron.deny" ] && stat -Lc 'Access: (%a/%A) Owner: (%U) Group: (%G)' /etc/cron.deny
+      register: audit_2_4_1_9_0
+      changed_when: false
+      failed_when: >-
+        audit_2_4_1_9_0.stdout_lines | reject('match', '^Access: \(640/-rw-r-----\) Owner: \(root\) Group: \((root|crontab)\)$') | list | length > 0
+      ignore_errors: true
+      when: cis_condition_cron_is_installed_on_the_system_ensure_access_to_c | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.9 Ensure access to crontab is configured (Remediation - cron is installed on the system)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          [ ! -e "/etc/cron.allow" ] && touch /etc/cron.allow
+          chmod u-x,g-wx,o-rwx /etc/cron.allow
+          if grep -Pq -- '^\h*crontab\:' /etc/group; then
+            chown root:crontab /etc/cron.allow
+          else
+            chown root:root /etc/cron.allow
+          fi
+        }
+      register: rem_2_4_1_9_0
+      changed_when: rem_2_4_1_9_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_9_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.1.9 Ensure access to crontab is configured (Remediation - /etc/cron.deny exists, run the following script to)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          if [ -e "/etc/cron.deny" ]; then
+            chmod u-x,g-wx,o-rwx /etc/cron.deny
+            if grep -Pq -- '^\h*crontab\:' /etc/group; then
+              chown root:crontab /etc/cron.deny
+            else
+              chown root:root /etc/cron.deny
+            fi
+          fi
+        }
+      register: rem_2_4_1_9_1
+      changed_when: rem_2_4_1_9_1.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_1_9_1.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    # ------------------------------------------------------------
+    # 2.4.2 Configure at
+    # ------------------------------------------------------------
+    - name: "2.4.2 Configure at (Audit - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual audit required"
+      tags: ["cis", "manual"]
+
+    - name: "2.4.2 Configure at (Remediation - Manual intervention required)"
+      ansible.builtin.debug:
+        msg: "Manual remediation required"
+      tags: ["cis", "manual"]
+
+    # ------------------------------------------------------------
+    # 2.4.2.1 Ensure access to at is configured
+    # ------------------------------------------------------------
+    - name: "2.4.2.1 Ensure access to at is configured (Audit - at is installed on the system)"
+      ansible.builtin.shell: |
+        stat -Lc 'Access: (%a/%A) Owner: (%U) Group: (%G)' /etc/at.allow
+        [ -e "/etc/at.deny" ] && stat -Lc 'Access: (%a/%A) Owner: (%U) Group: (%G)' /etc/at.deny
+      register: audit_2_4_2_1_0
+      changed_when: false
+      failed_when: >-
+        audit_2_4_2_1_0.stdout_lines | reject('match', '^Access: \(640/-rw-r-----\) Owner: \(root\) Group: \((daemon|root)\)$') | list | length > 0
+      ignore_errors: true
+      when: cis_condition_at_is_installed_on_the_system_ensure_access_to_at_ | default(false)
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+    - name: "2.4.2.1 Ensure access to at is configured (Remediation - /etc/at.deny exists)"
+      ansible.builtin.shell: |
+        #!/usr/bin/env bash
+        {
+          grep -Pq -- '^daemon\b' /etc/group && l_group="daemon" || l_group="root"
+          [ ! -e "/etc/at.allow" ] && touch /etc/at.allow
+          chown root:"$l_group" /etc/at.allow
+          chmod u-x,g-wx,o-rwx /etc/at.allow
+          [ -e "/etc/at.deny" ] && chown root:"$l_group" /etc/at.deny
+          [ -e "/etc/at.deny" ] && chmod u-x,g-wx,o-rwx /etc/at.deny
+        }
+      register: rem_2_4_2_1_0
+      changed_when: rem_2_4_2_1_0.rc == 0
+      ignore_errors: true
+      when:
+        - audit_2_4_2_1_0.rc != 0
+      tags: ["level_1__server", "level_1__workstation", "cis", "automated"]
+
+  post_tasks:
+    - name: "Clean up the temporary directory"
+      ansible.builtin.file:
+        path: "{{ host_dest_dir_temp_cis }}"
+        state: absent
+      register: temp_cleanup
+      changed_when: temp_cleanup.changed
+
